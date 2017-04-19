@@ -7,7 +7,7 @@ def load_parameters():
 
     # Input data params
     DATASET_NAME = 'EuTrans'                        # Task name
-    SRC_LAN = 'en'                                  # Language of the source text
+    SRC_LAN = 'en'                                # Language of the source text
     TRG_LAN = 'es'                                  # Language of the target text
     DATA_ROOT_PATH = 'examples/%s/' % DATASET_NAME  # Path where data is stored
 
@@ -60,14 +60,14 @@ def load_parameters():
     MAPPING = DATA_ROOT_PATH + '/mapping.%s_%s.pkl' % (SRC_LAN, TRG_LAN) # Source -- Target pkl mapping (used for heuristics 1--2)
 
     # Word representation params
-    TOKENIZATION_METHOD = 'tokenize_none'         # Select which tokenization we'll apply.
+    TOKENIZATION_METHOD = 'tokenize_none_char'         # Select which tokenization we'll apply.
                                                   # See Dataset class (from stager_keras_wrapper) for more info.
-    DETOKENIZATION_METHOD = 'tokenize_none'       # Select which de-tokenization method we'll apply
+    DETOKENIZATION_METHOD = 'detokenize_none_char'       # Select which de-tokenization method we'll apply
     
-    APPLY_DETOKENIZATION = False                  # Wheter we apply a detokenization method 
+    APPLY_DETOKENIZATION = True                   # Wheter we apply a detokenization method 
 
-    TOKENIZE_HYPOTHESES = True   		  # Whether we tokenize the hypotheses using the previously defined tokenization method
-    TOKENIZE_REFERENCES = True                    # Whether we tokenize the references using the previously defined tokenization method
+    TOKENIZE_HYPOTHESES = False   		  # Whether we tokenize the hypotheses using the previously defined tokenization method
+    TOKENIZE_REFERENCES = False                   # Whether we tokenize the references using the previously defined tokenization method
     # Input image parameters
     DATA_AUGMENTATION = False                     # Apply data augmentation on input data (still unimplemented for text inputs)
 
@@ -80,14 +80,14 @@ def load_parameters():
                                                   # otherwise it will be truncated to these most frequent words.
     MIN_OCCURRENCES_VOCAB = 0                     # Minimum number of occurrences allowed for the words in the vocabulay.
                                                   # Set to 0 for using them all.
-    MAX_INPUT_TEXT_LEN = 50                       # Maximum length of the input sequence
+    MAX_INPUT_TEXT_LEN = 300                      # Maximum length of the input sequence
 
     # Output text parameters
     OUTPUT_VOCABULARY_SIZE = 0                    # Size of the input vocabulary. Set to 0 for using all,
                                                   # otherwise it will be truncated to these most frequent words.
-    MAX_OUTPUT_TEXT_LEN = 50                      # Maximum length of the output sequence
+    MAX_OUTPUT_TEXT_LEN = 300                     # Maximum length of the output sequence
                                                   # set to 0 if we want to use the whole answer as a single class
-    MAX_OUTPUT_TEXT_LEN_TEST = 120                # Maximum length of the output sequence during test time
+    MAX_OUTPUT_TEXT_LEN_TEST = 300                # Maximum length of the output sequence during test time
 
     # Optimizer parameters (see model.compile() function)
     LOSS = 'categorical_crossentropy'
@@ -103,7 +103,7 @@ def load_parameters():
 
     # Training parameters
     MAX_EPOCH = 500                               # Stop when computed this number of epochs
-    BATCH_SIZE = 50                               # Size of each minibatch
+    BATCH_SIZE = 20                               # Size of each minibatch
 
     HOMOGENEOUS_BATCHES = False                   # Use batches with homogeneous output lengths
     JOINT_BATCHES = 4                             # When using homogeneous batches, get this number of batches to sort
@@ -114,7 +114,7 @@ def load_parameters():
 
     # Early stop parameters
     EARLY_STOP = True                             # Turns on/off the early stop protocol
-    PATIENCE = 20                                 # We'll stop if the val STOP_METRIC does not improve after this
+    PATIENCE = 15                                 # We'll stop if the val STOP_METRIC does not improve after this
                                                   # number of evaluations
     STOP_METRIC = 'Bleu_4'                        # Metric for the stop
 
@@ -191,7 +191,7 @@ def load_parameters():
 
     MODEL_NAME += EXTRA_NAME
 
-    STORE_PATH = 'trained_models/' + MODEL_NAME + '/'  # Models and evaluation results will be stored here
+    STORE_PATH = '/media/HDD_2TB/antonio/trained_models/' + MODEL_NAME + '/'  # Models and evaluation results will be stored here
     DATASET_STORE_PATH = 'datasets/'                   # Dataset instance will be stored here
 
     SAMPLING_SAVE_MODE = 'list'                        # 'list' or 'vqa'
