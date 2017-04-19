@@ -5,6 +5,7 @@ from timeit import default_timer as timer
 from configMarta import load_parameters
 from data_engine.prepare_data import build_dataset
 from keras_wrapper.cnn_model import loadModel, updateModel
+from keras_wrapper.dataset import loadDataset
 from keras_wrapper.extra.callbacks import *
 from model_zoo import TranslationModel
 from utils.utils import update_parameters
@@ -13,7 +14,19 @@ logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] %(message)s', dat
 logger = logging.getLogger(__name__)
 
 
-def train_model(params):
+def parse_args():
+    parser = argparse.ArgumentParser("Train or sample NMT models")
+    parser.add_argument("-c", "--config", required=False, help="Config pkl for loading the model configuration. "
+                                                               "If not specified, hyperparameters "
+                                                               "are read from config.py")
+    parser.add_argument("-ds", "--dataset", required=False, help="Dataset instance with data")
+    parser.add_argument("changes", nargs="*", help="Changes to config. "
+                                                   "Following the syntax Key=Value",
+                        default="")
+    return parser.parse_args()
+
+
+def train_model(params, load_dataset=None):
     """
     Training function. Sets the training parameters from params. Build or loads the model and launches the training.
     :param params: Dictionary of network hyperparameters.
@@ -26,7 +39,11 @@ def train_model(params):
     check_params(params)
 
     # Load data
-    dataset = build_dataset(params)
+    if load_dataset is None:
+        dataset = build_dataset(params)
+    else:
+        dataset = loadDataset(load_dataset)
+
     params['INPUT_VOCABULARY_SIZE'] = dataset.vocabulary_len[params['INPUTS_IDS_DATASET'][0]]
     params['OUTPUT_VOCABULARY_SIZE'] = dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]]
 
@@ -61,6 +78,22 @@ def train_model(params):
                                      store_path=params['STORE_PATH'],
                                      set_optimizer=False,
                                      clear_dirs=False)
+
+        # Define the inputs and outputs mapping from our Dataset instance to our model
+        inputMapping = dict()
+        for i, id_in in enumerate(params['INPUTS_IDS_DATASET']):
+            pos_source = dataset.ids_inputs.index(id_in)
+            id_dest = nmt_model.ids_inputs[i]
+            inputMapping[id_dest] = pos_source
+        nmt_model.setInputsMapping(inputMapping)
+
+        outputMapping = dict()
+        for i, id_out in enumerate(params['OUTPUTS_IDS_DATASET']):
+            pos_target = dataset.ids_outputs.index(id_out)
+            id_dest = nmt_model.ids_outputs[i]
+            outputMapping[id_dest] = pos_target
+
+        nmt_model.setOutputsMapping(outputMapping)
         nmt_model = updateModel(nmt_model, params['STORE_PATH'], params['RELOAD'])
         nmt_model.setParams(params)
         nmt_model.setOptimizer()
@@ -81,7 +114,7 @@ def train_model(params):
                        'extra_callbacks': callbacks, 'reload_epoch': params['RELOAD'], 'epoch_offset': params['RELOAD'],
                        'data_augmentation': params['DATA_AUGMENTATION'],
                        'patience': params.get('PATIENCE', 0),  # early stopping parameters
-                       'metric_check': params.get('STOP_METRIC', None),
+                       'metric_check': params.get('STOP_METRIC', None) if params.get('EARLY_STOP', False) else None,
                        'eval_on_epochs': params.get('EVAL_EACH_EPOCHS', True),
                        'each_n_epochs': params.get('EVAL_EACH', 1),
                        'start_eval_on_epoch': params.get('START_EVAL_ON_EPOCH', 0)}
@@ -92,7 +125,7 @@ def train_model(params):
     logging.info('In total is {0:.2f}s = {1:.2f}m'.format(time_difference, time_difference / 60.0))
 
 
-def apply_NMT_model(params):
+def apply_NMT_model(params, load_dataset=None):
     """
     Sample from a previously trained model.
 
@@ -101,7 +134,10 @@ def apply_NMT_model(params):
     """
 
     # Load data
-    dataset = build_dataset(params)
+    if load_dataset is None:
+        dataset = build_dataset(params)
+    else:
+        dataset = loadDataset(load_dataset)
     params['INPUT_VOCABULARY_SIZE'] = dataset.vocabulary_len[params['INPUTS_IDS_DATASET'][0]]
     params['OUTPUT_VOCABULARY_SIZE'] = dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]]
 
@@ -190,7 +226,8 @@ def buildCallbacks(params, model, dataset):
                       'detokenize_f': eval('dataset.' + params.get('DETOKENIZATION_METHOD', 'detokenize_none')),
                       'apply_detokenization': params.get('APPLY_DETOKENIZATION', False),
                       'tokenize_hypotheses': params.get('TOKENIZE_HYPOTHESES', True),
-                      'tokenize_references': params.get('TOKENIZE_REFERENCES', True)}
+                      'tokenize_references': params.get('TOKENIZE_REFERENCES', True)
+                      }
 
         vocab = dataset.vocabulary[params['OUTPUTS_IDS_DATASET'][0]]['idx2words']
         for s in params['EVAL_ON_SETS']:
@@ -246,17 +283,19 @@ def buildCallbacks(params, model, dataset):
 
     if params['SAMPLE_ON_SETS']:
         # Write some samples
-        extra_vars = {'language': params['TRG_LAN'], 'n_parallel_loaders': params['PARALLEL_LOADERS']}
+        extra_vars = {'language': params['TRG_LAN'],
+                      'n_parallel_loaders': params['PARALLEL_LOADERS'],
+                      'apply_detokenization': params.get('APPLY_DETOKENIZATION', False),
+                      'tokenize_hypotheses': params.get('TOKENIZE_HYPOTHESES', True),
+                      'tokenize_references': params.get('TOKENIZE_REFERENCES', True),
+                      'tokenize_f': eval('dataset.' + params.get('TOKENIZATION_METHOD', 'tokenize_none')),
+                      'detokenize_f': eval('dataset.' + params.get('DETOKENIZATION_METHOD', 'detokenize_none'))
+                      }
         vocab_x = dataset.vocabulary[params['INPUTS_IDS_DATASET'][0]]['idx2words']
         vocab_y = dataset.vocabulary[params['OUTPUTS_IDS_DATASET'][0]]['idx2words']
         for s in params['EVAL_ON_SETS']:
             extra_vars[s] = dict()
             extra_vars[s]['references'] = dataset.extra_variables[s][params['OUTPUTS_IDS_DATASET'][0]]
-            extra_vars[s]['tokenize_f'] = eval('dataset.' + params.get('TOKENIZATION_METHOD', 'tokenize_none'))
-            extra_vars[s]['detokenize_f'] = eval('dataset.' + params.get('DETOKENIZATION_METHOD', 'detokenize_none'))
-            extra_vars[s]['apply_detokenization'] = params.get('APPLY_DETOKENIZATION', False)
-            extra_vars[s]['tokenize_hypotheses'] = params.get('TOKENIZE_HYPOTHESES', True)
-            extra_vars[s]['tokenize_references'] = params.get('TOKENIZE_REFERENCES', True)
 
         if params['BEAM_SIZE']:
             extra_vars['beam_size'] = params['BEAM_SIZE']
@@ -291,8 +330,7 @@ def buildCallbacks(params, model, dataset):
                                                in_pred_idx=params['INPUTS_IDS_DATASET'][0],
                                                sampling_type=params['SAMPLING'],  # text info
                                                beam_search=params['BEAM_SEARCH'],
-                                               start_sampling_on_epoch=params['START_SAMPLING'
-                                                                              '_ON_EPOCH'],
+                                               start_sampling_on_epoch=params['START_SAMPLING_ON_EPOCH'],
                                                verbose=params['VERBOSE'])
         callbacks.append(callback_sampling)
     return callbacks
@@ -314,18 +352,6 @@ def check_params(params):
     if params['TRG_PRETRAINED_VECTORS'] and params['TRG_PRETRAINED_VECTORS'][:-1] != '.npy':
         warnings.warn('It seems that the pretrained word vectors provided for the target text are not in npy format.'
                       'You should preprocess the word embeddings with the "utils/preprocess_*_word_vectors.py script.')
-
-
-def parse_args():
-    parser = argparse.ArgumentParser("Train or sample NMT models")
-    parser.add_argument("-c", "--config", required=False, help="Config pkl for loading the model configuration. "
-                                                               "If not specified, hyperparameters "
-                                                               "are read from config.py")
-    parser.add_argument("-ds", "--dataset", required=False, help="Dataset instance with data")
-    parser.add_argument("changes", nargs="*", help="Changes to config. "
-                                                   "Following the syntax Key=Value",
-                        default="")
-    return parser.parse_args()
 
 
 if __name__ == "__main__":
@@ -351,9 +377,9 @@ if __name__ == "__main__":
     check_params(parameters)
     if parameters['MODE'] == 'training':
         logging.info('Running training.')
-        train_model(parameters)
+        train_model(parameters, args.dataset)
     elif parameters['MODE'] == 'sampling':
         logging.info('Running sampling.')
-        apply_NMT_model(parameters)
+        apply_NMT_model(parameters, args.dataset)
 
     logging.info('Done!')
