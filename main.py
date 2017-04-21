@@ -49,7 +49,7 @@ def train_model(params, load_dataset=None):
 
     # Build model
     if params['RELOAD'] == 0:  # build new model
-        nmt_model = TranslationModel(params, type=params['MODEL_TYPE'], verbose=params['VERBOSE'],
+        nmt_model = TranslationModel(params, model_type=params['MODEL_TYPE'], verbose=params['VERBOSE'],
                                      model_name=params['MODEL_NAME'], vocabularies=dataset.vocabulary,
                                      store_path=params['STORE_PATH'])
         dict2pkl(params, params['STORE_PATH'] + '/config')
@@ -71,7 +71,7 @@ def train_model(params, load_dataset=None):
 
     else:  # resume from previously trained model
         nmt_model = TranslationModel(params,
-                                     type=params['MODEL_TYPE'],
+                                     model_type=params['MODEL_TYPE'],
                                      verbose=params['VERBOSE'],
                                      model_name=params['MODEL_NAME'],
                                      vocabularies=dataset.vocabulary,
@@ -169,7 +169,7 @@ def apply_NMT_model(params, load_dataset=None):
             extra_vars['model_outputs'] = params['OUTPUTS_IDS_MODEL']
             extra_vars['dataset_inputs'] = params['INPUTS_IDS_DATASET']
             extra_vars['dataset_outputs'] = params['OUTPUTS_IDS_DATASET']
-            extra_vars['normalize'] = params.get('NORMALIZE_SAMPLING', False)
+            extra_vars['normalize_probs'] = params.get('NORMALIZE_SAMPLING', False)
             extra_vars['alpha_factor'] = params.get('ALPHA_FACTOR', 1.)
             extra_vars['pos_unk'] = params['POS_UNK']
             if params['POS_UNK']:
@@ -244,7 +244,7 @@ def buildCallbacks(params, model, dataset):
             extra_vars['model_outputs'] = params['OUTPUTS_IDS_MODEL']
             extra_vars['dataset_inputs'] = params['INPUTS_IDS_DATASET']
             extra_vars['dataset_outputs'] = params['OUTPUTS_IDS_DATASET']
-            extra_vars['normalize'] = params.get('NORMALIZE_SAMPLING', False)
+            extra_vars['normalize_probs'] = params.get('NORMALIZE_SAMPLING', False)
             extra_vars['alpha_factor'] = params.get('ALPHA_FACTOR', 1.)
             extra_vars['pos_unk'] = params['POS_UNK']
             if params['POS_UNK']:
@@ -306,7 +306,7 @@ def buildCallbacks(params, model, dataset):
             extra_vars['model_outputs'] = params['OUTPUTS_IDS_MODEL']
             extra_vars['dataset_inputs'] = params['INPUTS_IDS_DATASET']
             extra_vars['dataset_outputs'] = params['OUTPUTS_IDS_DATASET']
-            extra_vars['normalize'] = params['NORMALIZE_SAMPLING']
+            extra_vars['normalize_probs'] = params['NORMALIZE_SAMPLING']
             extra_vars['alpha_factor'] = params['ALPHA_FACTOR']
             extra_vars['pos_unk'] = params['POS_UNK']
             if params['POS_UNK']:
