@@ -1034,13 +1034,7 @@ class TranslationModel(Model_Wrapper):
         # 3.2. Decoder's RNN initialization perceptrons with ctx mean
         ctx_mean = x  # We may want the padded annotation
 
-        def expand_dims(x):
-            return K.expand_dims(x, 1)
-
-        def expand_dims_output_shape(input_shape):
-            return (input_shape[0], 1, input_shape[1])
-        
-        annotations = Lambda(expand_dims, expand_dims_output_shape)(x)
+        annotations = Lambda(lambda c: K.expand_dims(c, dim=1), output_shape=lambda s: tuple([s[0]]+[None]+[s[1]]),name='lambda_broadcast')(x)
 
         if len(params['INIT_LAYERS']) > 0:
             for n_layer_init in range(len(params['INIT_LAYERS']) - 1):
@@ -1093,7 +1087,7 @@ class TranslationModel(Model_Wrapper):
                                                                          'USE_DROPOUT'] else None,
                                                                      init=params['INIT_FUNCTION'],
                                                                      return_sequences=True,
-                                                                     # return_extra_variables=True,
+                                                                     return_extra_variables=True,
                                                                      return_states=True,
                                                                      name='decoder_Att' + params['RNN_TYPE'] + 'Cond')
 
@@ -1226,7 +1220,7 @@ class TranslationModel(Model_Wrapper):
             params['BIDIRECTIONAL_ENCODER'] \
             else params['ENCODER_HIDDEN_SIZE']
         # Define inputs
-        preprocessed_annotations = Input(name='preprocessed_input', shape=tuple([None, preprocessed_size]))
+        preprocessed_annotations = Input(name='preprocessed_input', shape=tuple([None, 448]))
         prev_h_state = Input(name='prev_state', shape=tuple([params['DECODER_HIDDEN_SIZE']]))
         input_attentional_decoder = [state_below, preprocessed_annotations, prev_h_state]
 
