@@ -2,7 +2,7 @@ import argparse
 import ast
 from timeit import default_timer as timer
 
-from configMarta import load_parameters
+from config import load_parameters
 from data_engine.prepare_data import build_dataset
 from keras_wrapper.cnn_model import loadModel, updateModel
 from keras_wrapper.dataset import loadDataset

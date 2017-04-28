@@ -54,6 +54,7 @@ def update_dataset_from_file(ds,
                     build_vocabulary=False,
                     fill=params['FILL'],
                     max_text_len=params['MAX_INPUT_TEXT_LEN'],
+                    max_word_len=params['MAX_INPUT_WORD_LEN'],
                     max_words=params['INPUT_VOCABULARY_SIZE'],
                     min_occ=params['MIN_OCCURRENCES_INPUT_VOCAB'],
                     overwrite_split=True)
@@ -69,6 +70,7 @@ def update_dataset_from_file(ds,
                         offset=1,
                         fill=params['FILL'],
                         max_text_len=params['MAX_INPUT_TEXT_LEN'],
+                        max_word_len=params['MAX_INPUT_WORD_LEN'],
                         max_words=params['INPUT_VOCABULARY_SIZE'],
                         min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'],
                         overwrite_split=True)
@@ -163,6 +165,7 @@ def build_dataset(params):
                             build_vocabulary=build_vocabulary,
                             fill=params['FILL'],
                             max_text_len=params['MAX_INPUT_TEXT_LEN'],
+                            max_word_len=params['MAX_INPUT_WORD_LEN'],
                             max_words=params['INPUT_VOCABULARY_SIZE'],
                             min_occ=params['MIN_OCCURRENCES_INPUT_VOCAB'])
 

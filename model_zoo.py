@@ -952,5 +952,3 @@ class TranslationModel(Model_Wrapper):
             self.ids_outputs_next.append('next_memory')
             self.matchings_init_to_next['next_memory'] = 'prev_memory'
             self.matchings_next_to_next['next_memory'] = 'prev_memory'
-=======
->>>>>>> 57f3c46d1408cceb459dd747bd6de3d6e78b0269

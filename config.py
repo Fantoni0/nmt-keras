@@ -1,5 +1,5 @@
 
-ad_parameters():
+def load_parameters():
     """
     Loads the defined hyperparameters
     :return parameters: Dictionary of loaded parameters
@@ -73,6 +73,7 @@ ad_parameters():
 
     # Text parameters
     FILL = 'end'                                  # Whether we pad the 'end' or the 'start' of the sentence with 0s
+    FILL_CHAR = 'end'                             # Whether we pad the 'end, 'center' or 'start' of the vectors of characters. Meaningful when using Character encodingen using.
     PAD_ON_BATCH = True                           # Whether we take as many timesteps as the longest sequence of
                                                   # the batch or a fixed size (MAX_OUTPUT_TEXT_LEN)
     # Input text parameters
@@ -81,6 +82,7 @@ ad_parameters():
     MIN_OCCURRENCES_INPUT_VOCAB = 0               # Minimum number of occurrences allowed for the words in the input vocabulary.
                                                   # Set to 0 for using them all.
     MAX_INPUT_TEXT_LEN = 50                       # Maximum length of the input sequence
+    MAX_INPUT_WORD_LEN = 10                       # Maximum length of each word in the input sequence. Meaningful for character NMT. Set to 0 otherwise (the whole words will be used)
 
     # Output text parameters
     OUTPUT_VOCABULARY_SIZE = 0                    # Size of the input vocabulary. Set to 0 for using all,
