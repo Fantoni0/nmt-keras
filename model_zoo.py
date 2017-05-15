@@ -634,6 +634,7 @@ class TranslationModel(Model_Wrapper):
         :param params: Dictionary of params (see config.py)
         :return: None
         """
+        print("######################   MODELO CARACTER   ##########################")
         # 1. Source text input
         src_text = Input(name=self.ids_inputs[0], batch_shape=tuple([None, None]), dtype='int32')
         # 2. Encoder
