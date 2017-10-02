@@ -10,6 +10,7 @@ from keras.regularizers import l2
 from keras_wrapper.cnn_model import Model_Wrapper
 import keras.backend as K
 from keras_wrapper.extra.regularize import Regularize
+from numba.cuda.cudadrv.driver import _SizeNotSet
 
 
 class TranslationModel(Model_Wrapper):
@@ -324,7 +325,6 @@ class TranslationModel(Model_Wrapper):
                                   )(ctx_mean)
             initial_state = Regularize(initial_state, params, name='initial_state')
             input_attentional_decoder = [state_below, annotations, initial_state]
-
             if params['RNN_TYPE'] == 'LSTM':
                 initial_memory = Dense(params['DECODER_HIDDEN_SIZE'], name='initial_memory',
                                        init=params['INIT_FUNCTION'],
@@ -634,58 +634,153 @@ class TranslationModel(Model_Wrapper):
         :param params: Dictionary of params (see config.py)
         :return: None
         """
-        print("######################   MODELO CARACTER   ##########################")
         # 1. Source text input
-        src_text = Input(name=self.ids_inputs[0], batch_shape=tuple([None, None]), dtype='int32')
+        src_text = Input(name=self.ids_inputs[0],
+                         batch_shape=tuple([None,
+                                            params['MAX_INPUT_TEXT_LEN'],
+                                            params['MAX_INPUT_WORD_LEN']]),
+                         dtype='int32')
+
         # 2. Encoder
-        # 2.1. Source word embedding
-        src_embedding = Embedding(params['INPUT_VOCABULARY_SIZE'], params['SOURCE_TEXT_EMBEDDING_SIZE'],
-                                  name='source_word_embedding',
-                                  W_regularizer=l2(params['WEIGHT_DECAY']),
+        # 2.1. Source word embedding. Embedding at character level
+        src_embedding = Embedding(params['INPUT_VOCABULARY_SIZE'],
+                                  params['SOURCE_TEXT_EMBEDDING_SIZE'],
+                                  name='source_word_embedding', W_regularizer=l2(params['WEIGHT_DECAY']),
                                   init=params['INIT_FUNCTION'],
-                                  trainable=self.src_embedding_weights_trainable, weights=self.src_embedding_weights,
-                                  mask_zero=False)(src_text)                                  
+                                  trainable=self.src_embedding_weights_trainable,
+                                  weights=self.src_embedding_weights,
+                                  mask_zero=True)(src_text)
+
+        # Transform tri-dimensional mask into bi-dimenisonal one.
+        lambda_layer = Lambda(lambda x: x, name="FlattenMask",
+                                           output_shape=(params['MAX_INPUT_TEXT_LEN'],
+                                                         params['MAX_INPUT_WORD_LEN'],
+                                                         params['SOURCE_TEXT_EMBEDDING_SIZE']),
+                                           mask_function=lambda x, m: K.any(m, axis=2))
+        src_embedding = lambda_layer(src_embedding)
+
+        ''' 
+        Regularize is not a layer. Time Distributed can't be applied to a function.
         src_embedding = Regularize(src_embedding, params, name='src_embedding')
+        '''
+        # TO DO. Problems with TimeDistributed
+        # Batch normalization ad-hoc implementation
+        '''
+        if params.get('USE_BATCH_NORMALIZATION', False):
+            if params.get('WEIGHT_DECAY'):
+                l2_gamma_reg = l2(params['WEIGHT_DECAY'])
+                l2_beta_reg = l2(params['WEIGHT_DECAY'])
+            else:
+                l2_gamma_reg = None
+                l2_beta_reg = None
 
-        # 2.2. Character encoder
+            bn_mode = params.get('BATCH_NORMALIZATION_MODE', 0)
+            src_embedding = TimeDistributed(BatchNormalization(mode=bn_mode,
+                                                               gamma_regularizer=l2_gamma_reg,
+                                                               beta_regularizer=l2_beta_reg),
+                                                               name='emb_batch_normalization')(src_embedding)
+        '''
 
-        # How many filters?  Which type?
-        x1 = Convolution1D(64, 1, border_mode='same')(src_embedding) #filters, length, border_mode
-        x2 = Convolution1D(64, 2, border_mode='same')(src_embedding)
-        x3 = Convolution1D(64, 3, border_mode='same')(src_embedding)
-        x4 = Convolution1D(64, 4, border_mode='same')(src_embedding)
-        x5 = Convolution1D(64, 5, border_mode='same')(src_embedding)
-        x6 = Convolution1D(64, 6, border_mode='same')(src_embedding)
-        x7 = Convolution1D(64, 7, border_mode='same')(src_embedding)
+        # Permute dimensions to apply Convolutions over chars
+        # Dimensions MUST BE KNOWN or the following convolutional layers will not work
+        lambda_layer = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)),
+                                 output_shape=(params['MAX_INPUT_WORD_LEN'],
+                                               params['MAX_INPUT_TEXT_LEN'],
+                                               params['SOURCE_TEXT_EMBEDDING_SIZE']), name="initial_permutation")
+        src_embedding = lambda_layer(src_embedding)
 
-        #Apply tanh to outputs of convolutional layers
+        # Convolutions. Filters, length, border_mode
+        outs = []
+        total_size = 0
+        for nfilters, sizef in zip(params['NUMBER_FILTERS'], params['FILTER_WIDTH']):
+            outs.append(TimeDistributed(Convolution1D(nfilters, sizef, border_mode='same'), name='conv_filter_'+str(sizef))(src_embedding))
+            total_size += nfilters
 
-        x1 = Activation('tanh')(x1)
-        x2 = Activation('tanh')(x2)
-        x3 = Activation('tanh')(x3)
-        x4 = Activation('tanh')(x4)
-        x5 = Activation('tanh')(x5)
-        x6 = Activation('tanh')(x6)
-        x7 = Activation('tanh')(x7)
+        # Apply tanh to outputs of convolutional layers
+        for idx, conv in enumerate(outs):
+            outs[idx] = Activation('tanh', name='tanh_activation_' + str(idx))(conv)
 
-        # Max Pooling over time
-        x1 = GlobalMaxPooling1D()(x1)
-        x2 = GlobalMaxPooling1D()(x2)
-        x3 = GlobalMaxPooling1D()(x3)
-        x4 = GlobalMaxPooling1D()(x4)
-        x5 = GlobalMaxPooling1D()(x5)
-        x6 = GlobalMaxPooling1D()(x6)
-        x7 = GlobalMaxPooling1D()(x7)
+
+        # Permute dimensions again to make the pooling over the characters.
+        for idx, conv in enumerate(outs):
+            lambda_layer = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)),
+                        output_shape=(params['MAX_INPUT_TEXT_LEN'],
+                                      params['MAX_INPUT_WORD_LEN'], #Word, text
+                                      params['NUMBER_FILTERS'][idx]), name='permutation_'+str(idx))
+            outs[idx] = lambda_layer(conv)
+
+        # Max Pooling over time. For each word, we apply a GlobalMaxPooling
+        for idx, conv in enumerate(outs):
+            outs[idx] = TimeDistributed(GlobalMaxPooling1D(), name='max_pool_'+str(idx))(conv)
 
         # Concatenate of maximum values
-        x = merge([x1, x2, x3, x4, x5, x6, x7], mode='concat')
+        x = merge(outs, concat_axis=2,  mode='concat', name='merge_layer')
+
+        '''
+        Printing data and mask at execution time
+        lambda_layer = Lambda(lambda y: K.printing(y, "DATA_VIEW"), name='VIEW ' + str(idx))
+        lambda_layer = Lambda(lambda y: y, name='VIEW ' + str(idx))
+        lambda_layer.compute_mask = lambda y, m: K.printing(m, "\nMASK_VIEW====")
+        x = lambda_layer(x)
+        '''
 
         # Apply 2 Highway Layers
-        x = Highway()(x)
-        x = Highway()(x)
+        x = TimeDistributed(Highway(activation='relu'), name='Highway_1')(x)
+        x = TimeDistributed(Highway(activation='relu'), name='Highway_2')(x)
+
+        #####
+        if params['BIDIRECTIONAL_ENCODER']:
+            annotations = Bidirectional(eval(params['RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
+                                                                 W_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                                 U_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                                 b_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                                 dropout_W=params['RECURRENT_DROPOUT_P'] if params[
+                                                                     'USE_RECURRENT_DROPOUT'] else None,
+                                                                 dropout_U=params['RECURRENT_DROPOUT_P'] if params[
+                                                                     'USE_RECURRENT_DROPOUT'] else None,
+                                                                 init=params['INIT_FUNCTION'],
+                                                                 return_sequences=True),
+                                        name='bidirectional_encoder_' + params['RNN_TYPE'],
+                                        merge_mode='concat')(x)
+        else:
+            annotations = eval(params['RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
+                                                   W_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                   U_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                   b_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                   dropout_W=params['RECURRENT_DROPOUT_P'] if params[
+                                                       'USE_RECURRENT_DROPOUT'] else None,
+                                                   dropout_U=params['RECURRENT_DROPOUT_P'] if params[
+                                                       'USE_RECURRENT_DROPOUT'] else None,
+                                                   return_sequences=True,
+                                                   init=params['INIT_FUNCTION'],
+                                                   name='encoder_' + params['RNN_TYPE'])(x)
+        annotations = Regularize(annotations, params, name='annotations')
+
+        # 2.3. Potentially deep encoder
+        for n_layer in range(1, params['N_LAYERS_ENCODER']):
+            current_annotations = Bidirectional(eval(params['RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
+                                                                         W_regularizer=l2(
+                                                                             params['RECURRENT_WEIGHT_DECAY']),
+                                                                         U_regularizer=l2(
+                                                                             params['RECURRENT_WEIGHT_DECAY']),
+                                                                         b_regularizer=l2(
+                                                                             params['RECURRENT_WEIGHT_DECAY']),
+                                                                         dropout_W=params['RECURRENT_DROPOUT_P'] if
+                                                                         params['USE_RECURRENT_DROPOUT'] else None,
+                                                                         dropout_U=params['RECURRENT_DROPOUT_P'] if
+                                                                         params['USE_RECURRENT_DROPOUT'] else None,
+                                                                         init=params['INIT_FUNCTION'],
+                                                                         return_sequences=True,
+                                                                         ),
+                                                                        merge_mode='concat',
+                                                                        name='bidirectional_encoder_' + str(n_layer))(annotations)
+            current_annotations = Regularize(current_annotations, params, name='annotations_' + str(n_layer))
+            annotations = merge([annotations, current_annotations], mode='sum')
+
         # 3. Decoder
         # 3.1.1. Previously generated words as inputs for training -> Teacher forcing
         next_words = Input(name=self.ids_inputs[1], batch_shape=tuple([None, None]), dtype='int32')
+
         # 3.1.2. Target word embedding
         state_below = Embedding(params['OUTPUT_VOCABULARY_SIZE'], params['TARGET_TEXT_EMBEDDING_SIZE'],
                                 name='target_word_embedding',
@@ -696,9 +791,10 @@ class TranslationModel(Model_Wrapper):
         state_below = Regularize(state_below, params, name='state_below')
 
         # 3.2. Decoder's RNN initialization perceptrons with ctx mean
-        ctx_mean = x  # We may want the padded annotation
+        # We compute the mean of the annotations
 
-        annotations = Lambda(lambda c: K.expand_dims(c, dim=1), output_shape=lambda s: tuple([s[0]]+[None]+[s[1]]),name='lambda_broadcast')(x)
+        ctx_mean = MaskedMean()(annotations)
+        annotations = MaskLayer()(annotations)  # We may want the padded annotations
 
         if len(params['INIT_LAYERS']) > 0:
             for n_layer_init in range(len(params['INIT_LAYERS']) - 1):
@@ -725,7 +821,12 @@ class TranslationModel(Model_Wrapper):
                 initial_memory = Regularize(initial_memory, params, name='initial_memory')
                 input_attentional_decoder.append(initial_memory)
         else:
+            # Initialize to zeros vector
             input_attentional_decoder = [state_below, annotations]
+            initial_state = ZeroesLayer(params['DECODER_HIDDEN_SIZE'])(ctx_mean)
+            input_attentional_decoder.append(initial_state)
+            if params['RNN_TYPE'] == 'LSTM':
+                input_attentional_decoder.append(initial_state)
 
         # 3.3. Attentional decoder
         sharedAttRNNCond = eval('Att'+params['RNN_TYPE'] + 'Cond')(params['DECODER_HIDDEN_SIZE'],
@@ -884,7 +985,7 @@ class TranslationModel(Model_Wrapper):
             params['BIDIRECTIONAL_ENCODER'] \
             else params['ENCODER_HIDDEN_SIZE']
         # Define inputs
-        preprocessed_annotations = Input(name='preprocessed_input', shape=tuple([None, 448]))
+        preprocessed_annotations = Input(name='preprocessed_input', shape=tuple([params['MAX_INPUT_TEXT_LEN'], preprocessed_size]))
         prev_h_state = Input(name='prev_state', shape=tuple([params['DECODER_HIDDEN_SIZE']]))
         input_attentional_decoder = [state_below, preprocessed_annotations, prev_h_state]
 

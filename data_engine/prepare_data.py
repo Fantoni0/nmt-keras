@@ -25,6 +25,13 @@ def update_dataset_from_file(ds,
 
     :return: Dataset object with the processed data
     """
+
+    # If we are using Character NMT ONLY at encoder level. We'll need different tokenization functions
+    if params['MAX_INPUT_WORD_LEN'] > 0:
+        conditional_tok = 'tokenize_none'
+    else:
+        conditional_tok = params['TOKENIZATION_METHOD']
+
     for split in splits:
         if remove_outputs:
             ds.removeOutput(split,
@@ -35,11 +42,12 @@ def update_dataset_from_file(ds,
                          split,
                          type='text',
                          id=params['OUTPUTS_IDS_DATASET'][0],
-                         tokenization=params['TOKENIZATION_METHOD'],
+                         tokenization=conditional_tok,
                          build_vocabulary=False,
                          pad_on_batch=params['PAD_ON_BATCH'],
                          sample_weights=params['SAMPLE_WEIGHTS'],
                          max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
+                         max_word_len=params['MAX_INPUT_WORD_LEN'],
                          max_words=params['OUTPUT_VOCABULARY_SIZE'],
                          min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'],
                          overwrite_split=True)
@@ -53,6 +61,8 @@ def update_dataset_from_file(ds,
                     tokenization=params['TOKENIZATION_METHOD'],
                     build_vocabulary=False,
                     fill=params['FILL'],
+                    fill_char=params['FILL_CHAR'],
+                    char_bpe=params['CHAR_BPE'],
                     max_text_len=params['MAX_INPUT_TEXT_LEN'],
                     max_word_len=params['MAX_INPUT_WORD_LEN'],
                     max_words=params['INPUT_VOCABULARY_SIZE'],
@@ -65,13 +75,15 @@ def update_dataset_from_file(ds,
                         type='text',
                         id=params['INPUTS_IDS_DATASET'][1],
                         pad_on_batch=params['PAD_ON_BATCH'],
-                        tokenization=params['TOKENIZATION_METHOD'],
+                        tokenization=conditional_tok,
                         build_vocabulary=False,
                         offset=1,
                         fill=params['FILL'],
+                        fill_char=params['FILL_CHAR'],
                         max_text_len=params['MAX_INPUT_TEXT_LEN'],
                         max_word_len=params['MAX_INPUT_WORD_LEN'],
                         max_words=params['INPUT_VOCABULARY_SIZE'],
+                        char_bpe=params['CHAR_BPE'],
                         min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'],
                         overwrite_split=True)
         else:
@@ -107,6 +119,12 @@ def build_dataset(params):
         else:
             silence = True
 
+        # If we are using Character NMT ONLY at encoder level. We'll need different tokenization functions
+        if params['MAX_INPUT_WORD_LEN'] > 0:
+            conditional_tok = 'tokenize_none'
+        else:
+            conditional_tok = params['TOKENIZATION_METHOD']
+
         base_path = params['DATA_ROOT_PATH']
         name = params['DATASET_NAME'] + '_' + params['SRC_LAN'] + params['TRG_LAN']
         ds = Dataset(name, base_path, silence=silence)
@@ -118,11 +136,15 @@ def build_dataset(params):
                      'train',
                      type='text',
                      id=params['OUTPUTS_IDS_DATASET'][0],
-                     tokenization=params['TOKENIZATION_METHOD'],
+                     tokenization=conditional_tok,
                      build_vocabulary=True,
                      pad_on_batch=params['PAD_ON_BATCH'],
+                     fill=params['FILL_TARGET'],
+                     fill_char=params['FILL_CHAR'],
                      sample_weights=params['SAMPLE_WEIGHTS'],
                      max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
+                     max_word_len=params['MAX_INPUT_WORD_LEN'],
+                     char_bpe=params['CHAR_BPE'],
                      max_words=params['OUTPUT_VOCABULARY_SIZE'],
                      min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'])
         if params['ALIGN_FROM_RAW'] and not params['HOMOGENEOUS_BATCHES']:
@@ -138,12 +160,15 @@ def build_dataset(params):
                              type='text',
                              id=params['OUTPUTS_IDS_DATASET'][0],
                              pad_on_batch=params['PAD_ON_BATCH'],
-                             tokenization=params['TOKENIZATION_METHOD'],
+                             fill=params['FILL_TARGET'],
+                             fill_char=params['FILL_CHAR'],
+                             tokenization=conditional_tok,
                              sample_weights=params['SAMPLE_WEIGHTS'],
                              max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
+                             max_word_len=params['MAX_INPUT_WORD_LEN'],
                              max_words=params['OUTPUT_VOCABULARY_SIZE'])
                 if params['ALIGN_FROM_RAW'] and not params['HOMOGENEOUS_BATCHES']:
-                    ds.setRawOutput(base_path + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
+                    ds.setRawOutput(base_path + '/' + params['TEXT_FILES'][split]   + params['TRG_LAN'],
                                     split,
                                     type='file-name',
                                     id='raw_' + params['OUTPUTS_IDS_DATASET'][0])
@@ -164,24 +189,28 @@ def build_dataset(params):
                             tokenization=params['TOKENIZATION_METHOD'],
                             build_vocabulary=build_vocabulary,
                             fill=params['FILL'],
+                            fill_char=params['FILL_CHAR'],
                             max_text_len=params['MAX_INPUT_TEXT_LEN'],
                             max_word_len=params['MAX_INPUT_WORD_LEN'],
+                            char_bpe=params['CHAR_BPE'],
                             max_words=params['INPUT_VOCABULARY_SIZE'],
                             min_occ=params['MIN_OCCURRENCES_INPUT_VOCAB'])
 
-                if len(params['INPUTS_IDS_DATASET']) > 1:
+                if len(params['INPUTS_IDS_DATASET']) > 1: #State_below
                     if 'train' in split:
                         ds.setInput(base_path + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
                                     split,
                                     type='text',
                                     id=params['INPUTS_IDS_DATASET'][1],
                                     required=False,
-                                    tokenization=params['TOKENIZATION_METHOD'],
+                                    tokenization=conditional_tok,
                                     pad_on_batch=params['PAD_ON_BATCH'],
                                     build_vocabulary=params['OUTPUTS_IDS_DATASET'][0],
                                     offset=1,
-                                    fill=params['FILL'],
+                                    fill=params['FILL_TARGET'],
                                     max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
+                                    max_word_len=params['MAX_INPUT_WORD_LEN'],
+                                    char_bpe=params['CHAR_BPE'],
                                     max_words=params['OUTPUT_VOCABULARY_SIZE'])
                     else:
                         ds.setInput(None,
