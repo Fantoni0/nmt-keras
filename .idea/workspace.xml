@@ -2,19 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="448d45c5-25ac-468b-9f23-c0437a74591b" name="Default" comment="">
-      <change beforePath="" afterPath="$PROJECT_DIR$/__init__.py" />
-      <change beforePath="$PROJECT_DIR$/README.md" afterPath="$PROJECT_DIR$/README.md" />
-      <change beforePath="$PROJECT_DIR$/docs/source/help.rst" afterPath="$PROJECT_DIR$/docs/source/help.rst" />
-      <change beforePath="$PROJECT_DIR$/docs/source/index.rst" afterPath="$PROJECT_DIR$/docs/source/index.rst" />
-      <change beforePath="$PROJECT_DIR$/docs/source/requirements.rst" afterPath="$PROJECT_DIR$/docs/source/requirements.rst" />
-      <change beforePath="$PROJECT_DIR$/docs/source/resources.rst" afterPath="$PROJECT_DIR$/docs/source/resources.rst" />
-      <change beforePath="$PROJECT_DIR$/docs/source/tutorial.rst" afterPath="$PROJECT_DIR$/docs/source/tutorial.rst" />
-      <change beforePath="$PROJECT_DIR$/docs/source/usage.rst" afterPath="$PROJECT_DIR$/docs/source/usage.rst" />
-      <change beforePath="$PROJECT_DIR$/examples/documentation/attention_nmt_model.png" afterPath="$PROJECT_DIR$/examples/documentation/attention_nmt_model.png" />
-      <change beforePath="$PROJECT_DIR$/req-travis-pip.txt" afterPath="$PROJECT_DIR$/req-travis-pip.txt" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" afterPath="$PROJECT_DIR$/requirements.txt" />
-      <change beforePath="$PROJECT_DIR$/utils/preprocess_binary_word_vectors.py" afterPath="$PROJECT_DIR$/utils/preprocess_binary_word_vectors.py" />
-      <change beforePath="$PROJECT_DIR$/utils/preprocess_text_word_vectors.py" afterPath="$PROJECT_DIR$/utils/preprocess_text_word_vectors.py" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -28,7 +16,7 @@
       <file leaf-file-name="sample_ensemble.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/sample_ensemble.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="269">
+            <state relative-caret-position="1188">
               <caret line="66" column="84" lean-forward="false" selection-start-line="66" selection-start-column="84" selection-end-line="66" selection-end-column="84" />
               <folding>
                 <element signature="e#0#15#0" expanded="true" />
@@ -40,7 +28,7 @@
       <file leaf-file-name="config.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/config.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="200">
+            <state relative-caret-position="522">
               <caret line="29" column="10" lean-forward="false" selection-start-line="29" selection-start-column="10" selection-end-line="29" selection-end-column="10" />
               <folding />
             </state>
@@ -60,8 +48,8 @@
       <file leaf-file-name="model_ensemble.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/../staged_keras_wrapper/keras_wrapper/model_ensemble.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="144">
-              <caret line="288" column="46" lean-forward="true" selection-start-line="288" selection-start-column="46" selection-end-line="288" selection-end-column="46" />
+            <state relative-caret-position="198">
+              <caret line="291" column="56" lean-forward="false" selection-start-line="291" selection-start-column="56" selection-end-line="291" selection-end-column="56" />
               <folding />
             </state>
           </provider>
@@ -193,14 +181,22 @@
       <option name="presentableId" value="Default" />
       <updated>1517495035231</updated>
     </task>
+    <task id="LOCAL-00001" summary="Merge branch 'master' of https://github.com/Fantoni0/nmt-keras&#10;&#10;# Conflicts:&#10;#&#9;README.md&#10;#&#9;config.py&#10;#&#9;data_engine/prepare_data.py&#10;#&#9;docs/source/conf.py&#10;#&#9;docs/source/help.rst&#10;#&#9;docs/source/index.rst&#10;#&#9;docs/source/requirements.rst&#10;#&#9;docs/source/resources.rst&#10;#&#9;docs/source/tutorial.rst&#10;#&#9;docs/source/usage.rst&#10;#&#9;examples/documentation/attention_nmt_model.png&#10;#&#9;main.py&#10;#&#9;model_zoo.py&#10;#&#9;req-travis-pip.txt&#10;#&#9;requirements.txt&#10;#&#9;sample_ensemble.py&#10;#&#9;score.py&#10;#&#9;tests/test_NMT.py&#10;#&#9;utils/evaluate_from_file.py&#10;#&#9;utils/preprocess_binary_word_vectors.py&#10;#&#9;utils/preprocess_text_word_vectors.py">
+      <created>1517822470809</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1517822470809</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="25" width="1920" height="1175" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="File Transfer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3298969" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
@@ -216,6 +212,7 @@
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="File Transfer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3298969" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
@@ -227,11 +224,49 @@
   <component name="VcsContentAnnotationSettings">
     <option name="myLimit" value="2678400000" />
   </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Merge branch 'master' of https://github.com/Fantoni0/nmt-keras&#10;&#10;# Conflicts:&#10;#&#9;README.md&#10;#&#9;config.py&#10;#&#9;data_engine/prepare_data.py&#10;#&#9;docs/source/conf.py&#10;#&#9;docs/source/help.rst&#10;#&#9;docs/source/index.rst&#10;#&#9;docs/source/requirements.rst&#10;#&#9;docs/source/resources.rst&#10;#&#9;docs/source/tutorial.rst&#10;#&#9;docs/source/usage.rst&#10;#&#9;examples/documentation/attention_nmt_model.png&#10;#&#9;main.py&#10;#&#9;model_zoo.py&#10;#&#9;req-travis-pip.txt&#10;#&#9;requirements.txt&#10;#&#9;sample_ensemble.py&#10;#&#9;score.py&#10;#&#9;tests/test_NMT.py&#10;#&#9;utils/evaluate_from_file.py&#10;#&#9;utils/preprocess_binary_word_vectors.py&#10;#&#9;utils/preprocess_text_word_vectors.py" />
+    <option name="LAST_COMMIT_MESSAGE" value="Merge branch 'master' of https://github.com/Fantoni0/nmt-keras&#10;&#10;# Conflicts:&#10;#&#9;README.md&#10;#&#9;config.py&#10;#&#9;data_engine/prepare_data.py&#10;#&#9;docs/source/conf.py&#10;#&#9;docs/source/help.rst&#10;#&#9;docs/source/index.rst&#10;#&#9;docs/source/requirements.rst&#10;#&#9;docs/source/resources.rst&#10;#&#9;docs/source/tutorial.rst&#10;#&#9;docs/source/usage.rst&#10;#&#9;examples/documentation/attention_nmt_model.png&#10;#&#9;main.py&#10;#&#9;model_zoo.py&#10;#&#9;req-travis-pip.txt&#10;#&#9;requirements.txt&#10;#&#9;sample_ensemble.py&#10;#&#9;score.py&#10;#&#9;tests/test_NMT.py&#10;#&#9;utils/evaluate_from_file.py&#10;#&#9;utils/preprocess_binary_word_vectors.py&#10;#&#9;utils/preprocess_text_word_vectors.py" />
+  </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/sample_ensemble.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1188">
+          <caret line="66" column="84" lean-forward="false" selection-start-line="66" selection-start-column="84" selection-end-line="66" selection-end-column="84" />
+          <folding>
+            <element signature="e#0#15#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="522">
+          <caret line="29" column="10" lean-forward="false" selection-start-line="29" selection-start-column="10" selection-end-line="29" selection-end-column="10" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/data_engine/prepare_data.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1242">
+          <caret line="70" column="24" lean-forward="false" selection-start-line="70" selection-start-column="24" selection-end-line="70" selection-end-column="24" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../staged_keras_wrapper/keras_wrapper/model_ensemble.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4968">
+          <caret line="285" column="7" lean-forward="false" selection-start-line="285" selection-start-column="7" selection-end-line="285" selection-end-column="7" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/sample_ensemble.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1098">
@@ -268,7 +303,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/config.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="200">
+        <state relative-caret-position="522">
           <caret line="29" column="10" lean-forward="false" selection-start-line="29" selection-start-column="10" selection-end-line="29" selection-end-column="10" />
           <folding />
         </state>
@@ -276,7 +311,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/sample_ensemble.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="269">
+        <state relative-caret-position="1188">
           <caret line="66" column="84" lean-forward="false" selection-start-line="66" selection-start-column="84" selection-end-line="66" selection-end-column="84" />
           <folding>
             <element signature="e#0#15#0" expanded="true" />
@@ -286,8 +321,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/../staged_keras_wrapper/keras_wrapper/model_ensemble.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="144">
-          <caret line="288" column="46" lean-forward="true" selection-start-line="288" selection-start-column="46" selection-end-line="288" selection-end-column="46" />
+        <state relative-caret-position="198">
+          <caret line="291" column="56" lean-forward="false" selection-start-line="291" selection-start-column="56" selection-end-line="291" selection-end-column="56" />
           <folding />
         </state>
       </provider>
