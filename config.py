@@ -7,10 +7,9 @@ def load_parameters():
     # Input data params
     TASK_NAME = 'xerox'                              # Task name
     SRC_LAN = 'en'                                  # Language of the source text
-    TRG_LAN = 'fr'                                  # Language of the target text
+    TRG_LAN = 'de'                                  # Language of the target text
     #DATA_ROOT_PATH = 'examples/%s/joint_bpe' % TASK_NAME  # Path where data is stored
-    DATA_ROOT_PATH =  '/home/fantonio/datasets/%s/%s/joint_bpe/' % (TASK_NAME, SRC_LAN+TRG_LAN)  # Path where data is stored
-    #DATA_ROOT_PATH = '/home/fantonio/datasets/%s/multi/joint_bpe/' % (TASK_NAME)  # Path where data is stored
+    DATA_ROOT_PATH = '/home/fantonio/datasets/%s/%s/joint_bpe/' % (TASK_NAME, SRC_LAN+TRG_LAN)  # Path where data is stored
 
     # SRC_LAN or TRG_LAN will be added to the file names
     TEXT_FILES = {'train': 'training.',        # Data files
@@ -29,13 +28,13 @@ def load_parameters():
     EVAL_ON_SETS_KERAS = []                       # Possible values: 'train', 'val' and 'test' (Keras' evaluator). Untested.
     START_EVAL_ON_EPOCH = 1                       # First epoch to start the model evaluation
     EVAL_EACH_EPOCHS = False                      # Select whether evaluate between N epochs or N updates
-    EVAL_EACH = 1800                               # Sets the evaluation frequency (epochs or updates)
+    EVAL_EACH = 800                               # Sets the evaluation frequency (epochs or updates)
 
     # Search parameters
     SAMPLING = 'max_likelihood'                   # Possible values: multinomial or max_likelihood (recommended)
     TEMPERATURE = 1                               # Multinomial sampling parameter
     BEAM_SEARCH = True                            # Switches on-off the beam search procedure
-    BEAM_SIZE = 12                                 # Beam size (in case of BEAM_SEARCH == True)
+    BEAM_SIZE = 6                                 # Beam size (in case of BEAM_SEARCH == True)
     OPTIMIZED_SEARCH = True                       # Compute annotations only a single time per sample
     SEARCH_PRUNING = False                        # Apply pruning strategies to the beam search method.
     # It will likely increase decoding speed, but decrease quality.
@@ -61,11 +60,11 @@ def load_parameters():
     SAMPLE_ON_SETS = ['train', 'val']             # Possible values: 'train', 'val' and 'test'
     N_SAMPLES = 5                                 # Number of samples generated
     START_SAMPLING_ON_EPOCH = 2                   # First epoch where to start the sampling counter
-    SAMPLE_EACH_UPDATES = 4200                    # Sampling frequency (always in #updates)
+    SAMPLE_EACH_UPDATES = 1500                     # Sampling frequency (always in #updates)
 
     # Unknown words treatment
     POS_UNK = False                                # Enable POS_UNK strategy for unknown words
-    HEURISTIC =  0                                 # Heuristic to follow:
+    HEURISTIC = 0                                 # Heuristic to follow:
     #     0: Replace the UNK by the correspondingly aligned source
     #     1: Replace the UNK by the translation (given by an external
     #        dictionary) of the correspondingly aligned source
@@ -111,14 +110,14 @@ def load_parameters():
     # otherwise it will be truncated to these most frequent words.
     MIN_OCCURRENCES_INPUT_VOCAB = 0               # Minimum number of occurrences allowed for the words in the input vocabulary.
     # Set to 0 for using them all.
-    MAX_INPUT_TEXT_LEN = 80                     # Maximum length of the input sequence
-    MAX_INPUT_WORD_LEN = 20                        # Maximum length of each word in the input sequence. Meaningful for character NMT. Set to 0 otherwise (the whole words will be used)
+    MAX_INPUT_TEXT_LEN = 60                       # Maximum length of the input sequence
+    MAX_INPUT_WORD_LEN = 0                        # Maximum length of each word in the input sequence. Meaningful for character NMT. Set to 0 otherwise (the whole words will be used)
 
     # Output text parameters
     OUTPUT_VOCABULARY_SIZE = 0                # Size of the input vocabulary. Set to 0 for using all,
     # otherwise it will be truncated to these most frequent words.
     MIN_OCCURRENCES_OUTPUT_VOCAB = 0              # Minimum number of occurrences allowed for the words in the output vocabulary.
-    MAX_OUTPUT_TEXT_LEN = 80                      # Maximum length of the output sequence
+    MAX_OUTPUT_TEXT_LEN = 60                      # Maximum length of the output sequence
     # set to 0 if we want to use the whole answer as a single class
     MAX_OUTPUT_TEXT_LEN_TEST = MAX_OUTPUT_TEXT_LEN * 3  # Maximum length of the output sequence during test time
 
@@ -143,7 +142,7 @@ def load_parameters():
 
     # Training parameters
     MAX_EPOCH = 500                               # Stop when computed this number of epochs
-    BATCH_SIZE = 35                                # Size of each minibatch
+    BATCH_SIZE = 50                                # Size of each minibatch
 
     HOMOGENEOUS_BATCHES = False                   # Use batches with homogeneous output lengths
     JOINT_BATCHES = 4                             # When using homogeneous batches, get this number of batches to sort
@@ -159,7 +158,7 @@ def load_parameters():
     STOP_METRIC = 'Bleu_4'                        # Metric for the stop
 
     # Model parameters
-    MODEL_TYPE = 'CharacterModel'#'AttentionRNNEncoderDecoder'                 # Model to train. See model_zoo() for the supported architectures
+    MODEL_TYPE = 'AttentionRNNEncoderDecoder'                 # Model to train. See model_zoo() for the supported architectures
     RNN_TYPE = ENCODER_RNN_TYPE = 'LSTM'                     # Encoder's RNN unit type ('LSTM' and 'GRU' supported)
     DECODER_RNN_TYPE = 'ConditionalLSTM'          # Decoder's RNN unit type
     # ('LSTM', 'GRU', 'ConditionalLSTM' and 'ConditionalGRU' supported)
@@ -168,7 +167,7 @@ def load_parameters():
     INNER_INIT = 'orthogonal'                     # Initialization function for inner RNN matrices.
     INIT_ATT = 'glorot_uniform'                   # Initialization function for attention mechism matrices
 
-    SOURCE_TEXT_EMBEDDING_SIZE = 20               # Source language word embedding size.
+    SOURCE_TEXT_EMBEDDING_SIZE = 420               # Source language word embedding size.
     SRC_PRETRAINED_VECTORS = None                 # Path to pretrained vectors (e.g.: DATA_ROOT_PATH + '/DATA/word2vec.%s.npy' % SRC_LAN)
     # Set to None if you don't want to use pretrained vectors.
     # When using pretrained word embeddings. this parameter must match with the word embeddings size
