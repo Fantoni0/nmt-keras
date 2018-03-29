@@ -1,8 +1,6 @@
-#####
 Usage
-#####
+=====
 
-********
 Training
 ********
 
@@ -12,7 +10,6 @@ Training
 
     python main.py
 
-********
 Decoding
 ********
 Once we have our model trained, we can translate new text using the `sample_ensemble.py`_ script. Please refer to the `ensembling tutorial`_ for more details about this script.
@@ -23,7 +20,6 @@ In short, if we want to use the models from the first three epochs to translate 
                               --dataset datasets/Dataset_tutorial_dataset.pkl \
                               --text examples/EuTrans/test.en
 
-*******
 Scoring
 *******
 

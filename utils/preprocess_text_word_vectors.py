@@ -1,10 +1,17 @@
 import numpy as np
-import argparse
-from os.path import basename, dirname
-
 
 # Preprocess pretrained text vectors
 # and stores them in a suitable format (.npy)
+
+# Parameters
+ROOT_PATH = '/media/HDD_2TB/DATASETS/'  # Data root path
+base_path = ROOT_PATH + 'cnn_polarity/DATA/'  # Binary vectors path
+vectors_basename = 'word2vec.'  # Name of the vectors file
+language = 'fr'  # Language
+dest_file = 'word2vec.' + language  # Destination file
+
+vectors_path = base_path + vectors_basename + language
+
 
 def txtvec2npy(v_path, base_path_save, dest_filename):
     """
@@ -13,8 +20,9 @@ def txtvec2npy(v_path, base_path_save, dest_filename):
     :param base_path_save: Path where the formatted vectors will be stored.
     :param dest_filename: Filename of the formatted vectors.
     """
-    word_vecs = dict()
+    vecs_dict = dict()
     print "Loading vectors from %s" % v_path
+
     glove_vectors = [x[:-1] for x in open(v_path).readlines()]
     n_vecs = len(glove_vectors)
     print "Found %d vectors in %s" % (n_vecs, v_path)
@@ -23,7 +31,7 @@ def txtvec2npy(v_path, base_path_save, dest_filename):
         v = vector.split()
         word = v[0]
         vec = np.asarray(v[1:], dtype='float32')
-        word_vecs[word] = vec
+        vecs_dict[word] = vec
         i += 1
         if i % 1000 == 0:
             print "Processed %d vectors (%.2f %%)\r" % \
@@ -31,22 +39,11 @@ def txtvec2npy(v_path, base_path_save, dest_filename):
 
     print
     # Store dict
-    print "Saving word vectors in %s" % \
+    print "Saving word vectors in %s" %\
           (base_path_save + '/' + dest_filename + '.npy')
-    np.save(base_path_save + '/' + dest_filename + '.npy', word_vecs)
+    np.save(base_path_save + '/' + dest_filename + '.npy', vecs_dict)
     print
 
 
-def parse_args():
-    parser = argparse.ArgumentParser("Preprocess pre-trained word embeddings.")
-    parser.add_argument("-v", "--vectors", required=True, help="Pre-trained word embeddings file.",
-                        default="GoogleNews-vectors-negative300.txt")
-    parser.add_argument("-d", "--destination", required=True, help="Destination file.", default='word2vec.en')
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
-    args = parse_args()
-    dest_file = basename(args.destination)
-    base_path = dirname(args.destination)
-    txtvec2npy(args.vectors, base_path, dest_file)
+    txtvec2npy(vectors_path, base_path, dest_file)
