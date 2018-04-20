@@ -72,7 +72,8 @@ def train_model(params, load_dataset=None):
             dataset = loadDataset(load_dataset)
 
     params['INPUT_VOCABULARY_SIZE'] = dataset.vocabulary_len[params['INPUTS_IDS_DATASET'][0]]
-    params['OUTPUT_VOCABULARY_SIZE'] = dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]]
+    params['OUTPUT_VOCABULARY_SIZE'] = [dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]], \
+                                        dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][1]] ]
 
     # Build model
     set_optimizer = True if params['RELOAD'] == 0 else False
@@ -106,7 +107,7 @@ def train_model(params, load_dataset=None):
     if params['RELOAD'] > 0:
         nmt_model = updateModel(nmt_model, params['STORE_PATH'], params['RELOAD'], reload_epoch=params['RELOAD_EPOCH'])
         nmt_model.setParams(params)
-        nmt_model.setOptimizer()
+        nmt_model.setOptimizer(loss_weights={'target_text':1., 'target_text':0.3 })
         if params.get('EPOCH_OFFSET') is None:
             params['EPOCH_OFFSET'] = params['RELOAD'] if params['RELOAD_EPOCH'] else \
                 int(params['RELOAD'] * params['BATCH_SIZE'] / dataset.len_train)
@@ -183,7 +184,8 @@ def apply_NMT_model(params, load_dataset=None):
     else:
         dataset = loadDataset(load_dataset)
     params['INPUT_VOCABULARY_SIZE'] = dataset.vocabulary_len[params['INPUTS_IDS_DATASET'][0]]
-    params['OUTPUT_VOCABULARY_SIZE'] = dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]]
+    params['OUTPUT_VOCABULARY_SIZE'] = [dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]], \
+                                        dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][1]]]
 
     # Load model
     nmt_model = loadModel(params['STORE_PATH'], params['RELOAD'], reload_epoch=params['RELOAD_EPOCH'])
@@ -201,9 +203,11 @@ def apply_NMT_model(params, load_dataset=None):
     input_text_id = params['INPUTS_IDS_DATASET'][0]
     vocab_x = dataset.vocabulary[input_text_id]['idx2words']
     vocab_y = dataset.vocabulary[params['OUTPUTS_IDS_DATASET'][0]]['idx2words']
+    vocab_y_2 = dataset.vocabulary[params['OUTPUTS_IDS_DATASET'][1]]['idx2words']
     if params['BEAM_SEARCH']:
         extra_vars['beam_size'] = params.get('BEAM_SIZE', 6)
         extra_vars['state_below_index'] = params.get('BEAM_SEARCH_COND_INPUT', -1)
+        extra_vars['feedback_decoder'] = params.get('FEEDBACK_DECODER', 0)
         extra_vars['maxlen'] = params.get('MAX_OUTPUT_TEXT_LEN_TEST', 30)
         extra_vars['optimized_search'] = params.get('OPTIMIZED_SEARCH', True)
         extra_vars['model_inputs'] = params['INPUTS_IDS_MODEL']
@@ -233,6 +237,7 @@ def apply_NMT_model(params, load_dataset=None):
     for s in params["EVAL_ON_SETS"]:
         extra_vars[s] = dict()
         extra_vars[s]['references'] = dataset.extra_variables[s][params['OUTPUTS_IDS_DATASET'][0]]
+        extra_vars[s]['references_2'] = dataset.extra_variables[s][params['OUTPUTS_IDS_DATASET'][1]]
         callback_metric = PrintPerformanceMetricOnEpochEndOrEachNUpdates(nmt_model,
                                                                          dataset,
                                                                          gt_id=params['OUTPUTS_IDS_DATASET'][0],
@@ -258,6 +263,33 @@ def apply_NMT_model(params, load_dataset=None):
 
         callback_metric.evaluate(params['RELOAD'], counter_name='epoch' if params['EVAL_EACH_EPOCHS'] else 'update')
 
+        # Suplicate evaluation for character softmax
+        callback_metric = PrintPerformanceMetricOnEpochEndOrEachNUpdates(nmt_model,
+                                                                         dataset,
+                                                                         gt_id=params['OUTPUTS_IDS_DATASET'][1],
+                                                                         metric_name=params['METRICS'],
+                                                                         set_name=params['EVAL_ON_SETS'],
+                                                                         batch_size=params['BATCH_SIZE'],
+                                                                         each_n_epochs=params['EVAL_EACH'],
+                                                                         extra_vars=extra_vars,
+                                                                         reload_epoch=params['RELOAD'],
+                                                                         is_text=True,
+                                                                         input_text_id=input_text_id,
+                                                                         save_path=nmt_model.model_path,
+                                                                         index2word_y=vocab_y_2, # Chars
+                                                                         index2word_x=vocab_x,
+                                                                         sampling_type=params['SAMPLING'],
+                                                                         beam_search=params['BEAM_SEARCH'],
+                                                                         start_eval_on_epoch=params[
+                                                                             'START_EVAL_ON_EPOCH'],
+                                                                         write_samples=True,
+                                                                         write_type=params['SAMPLING_SAVE_MODE'],
+                                                                         eval_on_epochs=params['EVAL_EACH_EPOCHS'],
+                                                                         save_each_evaluation=False,
+                                                                         verbose=params['VERBOSE'])
+
+        callback_metric.evaluate(params['RELOAD'], counter_name='epoch' if params['EVAL_EACH_EPOCHS'] else 'update')
+
 
 def buildCallbacks(params, model, dataset):
     """
@@ -275,19 +307,31 @@ def buildCallbacks(params, model, dataset):
         # Evaluate training
         extra_vars = {'language': params.get('TRG_LAN', 'en'),
                       'n_parallel_loaders': params['PARALLEL_LOADERS'],
-                      'tokenize_f': eval('dataset.' + params.get('TOKENIZATION_METHOD', 'tokenize_none')),
-                      'detokenize_f': eval('dataset.' + params.get('DETOKENIZATION_METHOD', 'detokenize_none')),
+                      'tokenize_f': eval('dataset.' + params.get('TOKENIZATION_METHOD', 'tokenize_none')[0]),
+                      'detokenize_f': eval('dataset.' + params.get('DETOKENIZATION_METHOD', 'detokenize_none')[0]),
+                      #'tokenize_f': [eval('dataset.' + str(tok)) for tok in params.get('TOKENIZATION_METHOD', ['tokenize_none'])],
+                      #'detokenize_f': [eval('dataset.' + str(dtok)) for dtok in params.get('DETOKENIZATION_METHOD', ['detokenize_none'])],
                       'apply_detokenization': params.get('APPLY_DETOKENIZATION', False),
                       'tokenize_hypotheses': params.get('TOKENIZE_HYPOTHESES', True),
                       'tokenize_references': params.get('TOKENIZE_REFERENCES', True)
                       }
 
         input_text_id = params['INPUTS_IDS_DATASET'][0]
+
         vocab_x = dataset.vocabulary[input_text_id]['idx2words']
         vocab_y = dataset.vocabulary[params['OUTPUTS_IDS_DATASET'][0]]['idx2words']
+        '''
+        vocab_x = []; vocab_y = []; gt_id = []; gt_pos = []
+        for i in range(len(params['OUTPUTS_IDS_DATASET'])):
+            vocab_x.append(dataset.vocabulary[input_text_id]['idx2words'])
+            vocab_y.append(dataset.vocabulary[params['OUTPUTS_IDS_DATASET'][i]]['idx2words'])
+            gt_id.append(params['OUTPUTS_IDS_DATASET'][i])
+            gt_pos.append(i)
+        '''
         if params['BEAM_SEARCH']:
             extra_vars['beam_size'] = params.get('BEAM_SIZE', 6)
             extra_vars['state_below_index'] = params.get('BEAM_SEARCH_COND_INPUT', -1)
+            extra_vars['feedback_decoder'] = params.get('FEEDBACK_DECODER', 0)
             extra_vars['maxlen'] = params.get('MAX_OUTPUT_TEXT_LEN_TEST', 30)
             extra_vars['optimized_search'] = params.get('OPTIMIZED_SEARCH', True)
             extra_vars['model_inputs'] = params['INPUTS_IDS_MODEL']
@@ -317,7 +361,11 @@ def buildCallbacks(params, model, dataset):
         if params['METRICS']:
             for s in params['EVAL_ON_SETS']:
                 extra_vars[s] = dict()
+                extra_vars[s]['references'] = []
                 extra_vars[s]['references'] = dataset.extra_variables[s][params['OUTPUTS_IDS_DATASET'][0]]
+                #for i in range(len(params['OUTPUTS_IDS_DATASET'])):
+                #    extra_vars[s]['references'].append(dataset.extra_variables[s][params['OUTPUTS_IDS_DATASET'][i]])
+
             callback_metric = PrintPerformanceMetricOnEpochEndOrEachNUpdates(model,
                                                                              dataset,
                                                                              gt_id=params['OUTPUTS_IDS_DATASET'][0],
@@ -345,6 +393,36 @@ def buildCallbacks(params, model, dataset):
 
             callbacks.append(callback_metric)
 
+            '''
+            callback_metric = PrintPerformanceMetricOnEpochEndOrEachNUpdates(model,
+                                                                             dataset,
+                                                                             gt_id=gt_id,
+                                                                             gt_pos=gt_pos,
+                                                                             output_types=['text', 'text'],
+                                                                             metric_name=[params['METRICS'],params['METRICS']],
+                                                                             set_name=params['EVAL_ON_SETS'],
+                                                                             batch_size=params['BATCH_SIZE'],
+                                                                             each_n_epochs=params['EVAL_EACH'],
+                                                                             extra_vars=extra_vars,
+                                                                             reload_epoch=params['RELOAD'],
+                                                                             is_text=True,
+                                                                             input_text_id=input_text_id,
+                                                                             index2word_y=vocab_y,
+                                                                             index2word_x=vocab_x,
+                                                                             sampling_type=params['SAMPLING'],
+                                                                             beam_search=params['BEAM_SEARCH'],
+                                                                             save_path=model.model_path,
+                                                                             start_eval_on_epoch=params[
+                                                                                 'START_EVAL_ON_EPOCH'],
+                                                                             write_samples=True,
+                                                                             write_type=[params['SAMPLING_SAVE_MODE'],params['SAMPLING_SAVE_MODE']],
+                                                                             eval_on_epochs=params['EVAL_EACH_EPOCHS'],
+                                                                             save_each_evaluation=params[
+                                                                                 'SAVE_EACH_EVALUATION'],
+                                                                             verbose=params['VERBOSE'])
+
+            callbacks.append(callback_metric)
+            '''
         if params['SAMPLE_ON_SETS']:
             callback_sampling = SampleEachNUpdates(model,
                                                    dataset,

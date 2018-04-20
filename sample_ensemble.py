@@ -67,7 +67,7 @@ if __name__ == "__main__":
     index2word_y = dataset.vocabulary[params['OUTPUTS_IDS_DATASET'][0]]['idx2words']
 
     if params.get('APPLY_DETOKENIZATION', False):
-        detokenize_function = eval('dataset.' + params['DETOKENIZATION_METHOD'])
+        detokenize_function = eval('dataset.' + params['DETOKENIZATION_METHOD'][0])
 
     params_prediction = dict()
     params_prediction['max_batch_size'] = params.get('BATCH_SIZE', 20)
@@ -75,6 +75,7 @@ if __name__ == "__main__":
     params_prediction['beam_size'] = params.get('BEAM_SIZE', 6)
     params_prediction['maxlen'] = params.get('MAX_OUTPUT_TEXT_LEN_TEST', 100)
     params_prediction['optimized_search'] = params['OPTIMIZED_SEARCH']
+    params_prediction['feedback_decoder'] = params.get('FEEDBACK_DECODER', 0)
     params_prediction['model_inputs'] = params['INPUTS_IDS_MODEL']
     params_prediction['model_outputs'] = params['OUTPUTS_IDS_MODEL']
     params_prediction['dataset_inputs'] = params['INPUTS_IDS_DATASET']
@@ -99,7 +100,6 @@ if __name__ == "__main__":
 
     for s in args.splits:
         # Apply model predictions
-        print("S= ", [s])
         params_prediction['predict_on_sets'] = [s]
         beam_searcher = BeamSearchEnsemble(models, dataset, params_prediction,
                                            n_best=args.n_best, verbose=args.verbose)
@@ -118,7 +118,6 @@ if __name__ == "__main__":
             alphas = None
             heuristic = None
             sources = None
-
         predictions = decode_predictions_beam_search(samples,
                                                      index2word_y,
                                                      alphas=alphas,

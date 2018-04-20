@@ -31,7 +31,7 @@ def update_dataset_from_file(ds,
     if params['MAX_INPUT_WORD_LEN'] > 0:
         conditional_tok = 'tokenize_none'
     else:
-        conditional_tok = params['TOKENIZATION_METHOD']
+        conditional_tok = params['TOKENIZATION_METHOD'][0]
 
     if output_text_filename is None:
         recompute_references = False
@@ -53,12 +53,27 @@ def update_dataset_from_file(ds,
                          id=params['OUTPUTS_IDS_DATASET'][0],
                          tokenization=conditional_tok,
                          build_vocabulary=False,
-                         pad_on_batch=params['PAD_ON_BATCH'],
+                         pad_on_batch=params['PAD_ON_BATCH'][0], # Add pads to words to match character sequence
                          fill=params.get('FILL_TARGET', 'end'),
                          sample_weights=params['SAMPLE_WEIGHTS'],
-                         max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
-                         max_words=params['OUTPUT_VOCABULARY_SIZE'],
-                         min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'],
+                         max_text_len=params['MAX_OUTPUT_TEXT_LEN'][0],
+                         max_words=params['OUTPUT_VOCABULARY_SIZE'][0],
+                         min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'][0],
+                         bpe_codes=params.get('BPE_CODES_PATH', None),
+                         overwrite_split=True)
+            # Sedon output. At character level
+            ds.setOutput(output_text_filename,
+                         split,
+                         type='dense_text' if 'sparse' in params['LOSS'] else 'text',
+                         id=params['OUTPUTS_IDS_DATASET'][1],
+                         tokenization=params['TOKENIZATION_METHOD'][1],
+                         build_vocabulary=False,
+                         pad_on_batch=params['PAD_ON_BATCH'][1],
+                         fill=params.get('FILL_TARGET', 'end'),
+                         sample_weights=params['SAMPLE_WEIGHTS'],
+                         max_text_len=params['MAX_OUTPUT_TEXT_LEN'][1],
+                         max_words=params['OUTPUT_VOCABULARY_SIZE'][1],
+                         min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'][1],
                          bpe_codes=params.get('BPE_CODES_PATH', None),
                          overwrite_split=True)
 
@@ -67,16 +82,16 @@ def update_dataset_from_file(ds,
                     split,
                     type='text',
                     id=params['INPUTS_IDS_DATASET'][0],
-                    tokenization= params.get('TOKENIZATION_METHOD', 'tokenize_none'),
+                    tokenization=params['TOKENIZATION_METHOD'][0],
                     build_vocabulary=False,
-                    pad_on_batch=params.get('PAD_ON_BATCH', True),
+                    pad_on_batch=params['PAD_ON_BATCH'][0],
                     fill=params.get('FILL', 'end'),
                     fill_char=params.get('FILL_CHAR', 'end'),
                     char_bpe=params['CHAR_BPE'],
                     max_text_len=params.get('MAX_INPUT_TEXT_LEN', 100),
                     max_word_len=params['MAX_INPUT_WORD_LEN'],
-                    max_words=params.get('INPUT_VOCABULARY_SIZE', 0),
-                    min_occ=params.get('MIN_OCCURRENCES_INPUT_VOCAB', 0),
+                    max_words=params['INPUT_VOCABULARY_SIZE'],
+                    min_occ=params['MIN_OCCURRENCES_INPUT_VOCAB'],
                     bpe_codes=params.get('BPE_CODES_PATH', None),
                     overwrite_split=True)
         if compute_state_below and output_text_filename is not None:
@@ -85,16 +100,16 @@ def update_dataset_from_file(ds,
                         split,
                         type='text',
                         id=params['INPUTS_IDS_DATASET'][1],
-                        pad_on_batch=params.get('PAD_ON_BATCH', True),
-                        tokenization=conditional_tok,
+                        pad_on_batch=params['PAD_ON_BATCH'][0],
+                        tokenization=params['TOKENIZATION_METHOD'][0],
                         build_vocabulary=False,
-                        offset=1,
+                        offset=1, # state below
                         fill=params['FILL'],
                         fill_char=params['FILL'],
-                        max_text_len=params['MAX_INPUT_TEXT_LEN'],
-                        max_words=params['INPUT_VOCABULARY_SIZE'],
+                        max_text_len=params['MAX_OUTPUT_TEXT_LEN'][0],
+                        max_words=params['OUTPUT_VOCABULARY_SIZE'][0],
                         char_bpe=params['CHAR_BPE'],
-                        min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'],
+                        min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'][0],
                         bpe_codes=params.get('BPE_CODES_PATH', None),
                         overwrite_split=True)
         else:
@@ -138,52 +153,83 @@ def build_dataset(params):
         if params['MAX_INPUT_WORD_LEN'] > 0:
             conditional_tok = 'tokenize_none'
         else:
-            conditional_tok = params['TOKENIZATION_METHOD']
+            conditional_tok = params['TOKENIZATION_METHOD'][0]
 
-        base_path = params['DATA_ROOT_PATH']
+        base_path = [params['DATA_ROOT_PATH'][0], params['DATA_ROOT_PATH'][1]]
         name = params['TASK_NAME'] + '_' + params['SRC_LAN'] + params['TRG_LAN']
-        ds = Dataset(name, base_path, silence=silence)
+        ds = Dataset(name, base_path[0], silence=silence)
 
         # OUTPUT DATA
         # Let's load the train, val and test splits of the target language sentences (outputs)
         #    the files include a sentence per line.
-        ds.setOutput(base_path + '/' + params['TEXT_FILES']['train'] + params['TRG_LAN'],
+        ds.setOutput(base_path[0] + '/' + params['TEXT_FILES']['train'] + params['TRG_LAN'],
                      'train',
                      type='dense_text' if 'sparse' in params['LOSS'] else 'text',
                      id=params['OUTPUTS_IDS_DATASET'][0],
-                     tokenization=conditional_tok,
+                     tokenization= params['TOKENIZATION_METHOD'][0],
                      build_vocabulary=True,
-                     pad_on_batch=params['PAD_ON_BATCH'],
+                     pad_on_batch=params['PAD_ON_BATCH'][0], # Add pads to words to match character sequence
                      fill=params.get('FILL_TARGET', 'end'),
                      fill_char=params.get('FILL_TARGET', 'end'),
                      sample_weights=params['SAMPLE_WEIGHTS'],
-                     max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
+                     max_text_len=params['MAX_OUTPUT_TEXT_LEN'][0],
                      char_bpe=params['CHAR_BPE'],
-                     max_words=params['OUTPUT_VOCABULARY_SIZE'],
-                     min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'],
+                     max_words=params['OUTPUT_VOCABULARY_SIZE'][0],
+                     min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'][0],
+                     bpe_codes=params.get('BPE_CODES_PATH', None))
+
+        # Load second reference. Word level
+        ds.setOutput(base_path[1] + '/' + params['TEXT_FILES']['train'] + params['TRG_LAN'],
+                     'train',
+                     type='dense_text' if 'sparse' in params['LOSS'] else 'text',
+                     id=params['OUTPUTS_IDS_DATASET'][1],
+                     tokenization=params['TOKENIZATION_METHOD'][1],
+                     build_vocabulary=True,
+                     pad_on_batch=params['PAD_ON_BATCH'][1],
+                     fill=params.get('FILL_TARGET', 'end'),
+                     fill_char=params.get('FILL_TARGET', 'end'),
+                     sample_weights=params['SAMPLE_WEIGHTS'],
+                     max_text_len=params['MAX_OUTPUT_TEXT_LEN'][1],
+                     char_bpe=params['CHAR_BPE'],
+                     max_words=params['OUTPUT_VOCABULARY_SIZE'][1],
+                     min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'][1],
                      bpe_codes=params.get('BPE_CODES_PATH', None))
         if params['ALIGN_FROM_RAW'] and not params['HOMOGENEOUS_BATCHES']:
-            ds.setRawOutput(base_path + '/' + params['TEXT_FILES']['train'] + params['TRG_LAN'],
+            ds.setRawOutput(base_path[0] + '/' + params['TEXT_FILES']['train'] + params['TRG_LAN'],
                             'train',
                             type='file-name',
                             id='raw_' + params['OUTPUTS_IDS_DATASET'][0])
 
         for split in ['val', 'test']:
             if params['TEXT_FILES'].get(split) is not None:
-                ds.setOutput(base_path + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
+                ds.setOutput(base_path[0] + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
                              split,
                              type='dense_text' if 'sparse' in params['LOSS'] else 'text',
                              id=params['OUTPUTS_IDS_DATASET'][0],
-                             pad_on_batch=params['PAD_ON_BATCH'],
+                             pad_on_batch=params['PAD_ON_BATCH'][0], # Add pads to words to match character sequence
                              fill=params.get('FILL_TARGET', 'end'),
                              fill_char=params.get('FILL_TARGET', 'end'),
                              tokenization=conditional_tok,
                              sample_weights=params['SAMPLE_WEIGHTS'],
-                             max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
-                             max_words=params['OUTPUT_VOCABULARY_SIZE'],
+                             max_text_len=params['MAX_OUTPUT_TEXT_LEN'][0],
+                             max_words=params['OUTPUT_VOCABULARY_SIZE'][0],
                              bpe_codes=params.get('BPE_CODES_PATH', None))
+                # Load second reference. At character level
+                ds.setOutput(base_path[1] + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
+                             split,
+                             type='dense_text' if 'sparse' in params['LOSS'] else 'text',
+                             id=params['OUTPUTS_IDS_DATASET'][1],
+                             pad_on_batch=params['PAD_ON_BATCH'][1],
+                             fill=params.get('FILL_TARGET', 'end'),
+                             fill_char=params.get('FILL_TARGET', 'end'),
+                             tokenization=params['TOKENIZATION_METHOD'][1],
+                             sample_weights=params['SAMPLE_WEIGHTS'],
+                             max_text_len=params['MAX_OUTPUT_TEXT_LEN'][1],
+                             max_words=params['OUTPUT_VOCABULARY_SIZE'][1],
+                             bpe_codes=params.get('BPE_CODES_PATH', None))
+
                 if params['ALIGN_FROM_RAW'] and not params['HOMOGENEOUS_BATCHES']:
-                    ds.setRawOutput(base_path + '/' + params['TEXT_FILES'][split]   + params['TRG_LAN'],
+                    ds.setRawOutput(base_path[0] + '/' + params['TEXT_FILES'][split]   + params['TRG_LAN'],
                                     split,
                                     type='file-name',
                                     id='raw_' + params['OUTPUTS_IDS_DATASET'][0])
@@ -196,12 +242,12 @@ def build_dataset(params):
                     build_vocabulary = True
                 else:
                     build_vocabulary = False
-                ds.setInput(base_path + '/' + params['TEXT_FILES'][split] + params['SRC_LAN'],
+                ds.setInput(base_path[0] + '/' + params['TEXT_FILES'][split] + params['SRC_LAN'],
                             split,
                             type='text',
                             id=params['INPUTS_IDS_DATASET'][0],
                             pad_on_batch=params.get('PAD_ON_BATCH', True),
-                            tokenization=params.get('TOKENIZATION_METHOD', 'tokenize_none'),
+                            tokenization=params['TOKENIZATION_METHOD'][0],
                             build_vocabulary=build_vocabulary,
                             fill=params['FILL'],
                             fill_char=params.get('FILL_CHAR', 'end'),
@@ -214,20 +260,20 @@ def build_dataset(params):
 
                 if len(params['INPUTS_IDS_DATASET']) > 1: #State_below
                     if 'train' in split:
-                        ds.setInput(base_path + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
+                        ds.setInput(base_path[0] + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
                                     split,
                                     type='text',
                                     id=params['INPUTS_IDS_DATASET'][1],
                                     required=False,
-                                    tokenization=conditional_tok,
+                                    tokenization=params['TOKENIZATION_METHOD'][0],#conditional_tok, TOKENIZE AT CHAR LEVEL TO ENSURE THE DECODER ITERATES ENOUGH
                                     pad_on_batch=params['PAD_ON_BATCH'],
                                     build_vocabulary=params['OUTPUTS_IDS_DATASET'][0],
                                     offset=1,
                                     fill=params.get('FILL', 'end'),
-                                    max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
+                                    max_text_len=params['MAX_OUTPUT_TEXT_LEN'][0],
                                     max_word_len=0,
                                     char_bpe=params['CHAR_BPE'],
-                                    max_words=params['OUTPUT_VOCABULARY_SIZE'],
+                                    max_words=params['OUTPUT_VOCABULARY_SIZE'][0],
                                     bpe_codes=params.get('BPE_CODES_PATH', None))
                     else:
                         ds.setInput(None,
@@ -236,7 +282,7 @@ def build_dataset(params):
                                     id=params['INPUTS_IDS_DATASET'][-1],
                                     required=False)
                 if params.get('ALIGN_FROM_RAW', True) and not params.get('HOMOGENEOUS_BATCHES', False):
-                    ds.setRawInput(base_path + '/' + params['TEXT_FILES'][split] + params['SRC_LAN'],
+                    ds.setRawInput(base_path[0] + '/' + params['TEXT_FILES'][split] + params['SRC_LAN'],
                                    split,
                                    type='file-name',
                                    id='raw_' + params['INPUTS_IDS_DATASET'][0])
