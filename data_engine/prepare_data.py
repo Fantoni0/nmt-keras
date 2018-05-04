@@ -140,7 +140,6 @@ def build_dataset(params):
     :param params: Parameters specifying Dataset options
     :return: Dataset object
     """
-
     if params['REBUILD_DATASET']:  # We build a new dataset instance
         if params['VERBOSE'] > 0:
             silence = False
@@ -178,22 +177,24 @@ def build_dataset(params):
                      min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'][0],
                      bpe_codes=params.get('BPE_CODES_PATH', None))
 
-        # Load second reference. Word level
-        ds.setOutput(base_path[1] + '/' + params['TEXT_FILES']['train'] + params['TRG_LAN'],
-                     'train',
-                     type='dense_text' if 'sparse' in params['LOSS'] else 'text',
-                     id=params['OUTPUTS_IDS_DATASET'][1],
-                     tokenization=params['TOKENIZATION_METHOD'][1],
-                     build_vocabulary=True,
-                     pad_on_batch=params['PAD_ON_BATCH'][1],
-                     fill=params.get('FILL_TARGET', 'end'),
-                     fill_char=params.get('FILL_TARGET', 'end'),
-                     sample_weights=params['SAMPLE_WEIGHTS'],
-                     max_text_len=params['MAX_OUTPUT_TEXT_LEN'][1],
-                     char_bpe=params['CHAR_BPE'],
-                     max_words=params['OUTPUT_VOCABULARY_SIZE'][1],
-                     min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'][1],
-                     bpe_codes=params.get('BPE_CODES_PATH', None))
+        # Cutre solucion - Borrar tan pronto ocmo temrinar de hacer las pruebas.
+        if params['LOSS_WEIGHTS'][1] != 0:
+            # Load second reference. Word level
+            ds.setOutput(base_path[1] + '/' + params['TEXT_FILES']['train'] + params['TRG_LAN'],
+                         'train',
+                         type='dense_text' if 'sparse' in params['LOSS'] else 'text',
+                         id=params['OUTPUTS_IDS_DATASET'][1],
+                         tokenization=params['TOKENIZATION_METHOD'][1],
+                         build_vocabulary=True,
+                         pad_on_batch=params['PAD_ON_BATCH'][1],
+                         fill=params.get('FILL_TARGET', 'end'),
+                         fill_char=params.get('FILL_TARGET', 'end'),
+                         sample_weights=params['SAMPLE_WEIGHTS'],
+                         max_text_len=params['MAX_OUTPUT_TEXT_LEN'][1],
+                         char_bpe=params['CHAR_BPE'],
+                         max_words=params['OUTPUT_VOCABULARY_SIZE'][1],
+                         min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'][1],
+                         bpe_codes=params.get('BPE_CODES_PATH', None))
         if params['ALIGN_FROM_RAW'] and not params['HOMOGENEOUS_BATCHES']:
             ds.setRawOutput(base_path[0] + '/' + params['TEXT_FILES']['train'] + params['TRG_LAN'],
                             'train',
@@ -209,24 +210,26 @@ def build_dataset(params):
                              pad_on_batch=params['PAD_ON_BATCH'][0], # Add pads to words to match character sequence
                              fill=params.get('FILL_TARGET', 'end'),
                              fill_char=params.get('FILL_TARGET', 'end'),
-                             tokenization=conditional_tok,
+                             #tokenization=conditional_tok,
                              sample_weights=params['SAMPLE_WEIGHTS'],
                              max_text_len=params['MAX_OUTPUT_TEXT_LEN'][0],
                              max_words=params['OUTPUT_VOCABULARY_SIZE'][0],
                              bpe_codes=params.get('BPE_CODES_PATH', None))
-                # Load second reference. At character level
-                ds.setOutput(base_path[1] + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
-                             split,
-                             type='dense_text' if 'sparse' in params['LOSS'] else 'text',
-                             id=params['OUTPUTS_IDS_DATASET'][1],
-                             pad_on_batch=params['PAD_ON_BATCH'][1],
-                             fill=params.get('FILL_TARGET', 'end'),
-                             fill_char=params.get('FILL_TARGET', 'end'),
-                             tokenization=params['TOKENIZATION_METHOD'][1],
-                             sample_weights=params['SAMPLE_WEIGHTS'],
-                             max_text_len=params['MAX_OUTPUT_TEXT_LEN'][1],
-                             max_words=params['OUTPUT_VOCABULARY_SIZE'][1],
-                             bpe_codes=params.get('BPE_CODES_PATH', None))
+                # Cutre solucion - Borrar tan pronto ocmo temrinar de hacer las pruebas.
+                if params['LOSS_WEIGHTS'][1] != 0:
+                    # Load second reference.
+                    ds.setOutput(base_path[1] + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
+                                 split,
+                                 type='dense_text' if 'sparse' in params['LOSS'] else 'text',
+                                 id=params['OUTPUTS_IDS_DATASET'][1],
+                                 pad_on_batch=params['PAD_ON_BATCH'][1],
+                                 fill=params.get('FILL_TARGET', 'end'),
+                                 fill_char=params.get('FILL_TARGET', 'end'),
+                                 #tokenization=params['TOKENIZATION_METHOD'][1],
+                                 sample_weights=params['SAMPLE_WEIGHTS'],
+                                 max_text_len=params['MAX_OUTPUT_TEXT_LEN'][1],
+                                 max_words=params['OUTPUT_VOCABULARY_SIZE'][1],
+                                 bpe_codes=params.get('BPE_CODES_PATH', None))
 
                 if params['ALIGN_FROM_RAW'] and not params['HOMOGENEOUS_BATCHES']:
                     ds.setRawOutput(base_path[0] + '/' + params['TEXT_FILES'][split]   + params['TRG_LAN'],

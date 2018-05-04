@@ -74,7 +74,8 @@ class TranslationModel(Model_Wrapper):
                 if src_word_vectors.get(word) is not None:
                     self.src_embedding_weights[index, :] = src_word_vectors[word]
             self.src_embedding_weights = [self.src_embedding_weights]
-            self.src_embedding_weights_trainable = params['SRC_PRETRAINED_VECTORS_TRAINABLE'] and params.get('TRAINABLE_ENCODER', True)
+            self.src_embedding_weights_trainable = params['SRC_PRETRAINED_VECTORS_TRAINABLE'] and params.get(
+                'TRAINABLE_ENCODER', True)
             del src_word_vectors
 
         else:
@@ -92,7 +93,8 @@ class TranslationModel(Model_Wrapper):
                 if trg_word_vectors.get(word) is not None:
                     self.trg_embedding_weights[index, :] = trg_word_vectors[word]
             self.trg_embedding_weights = [self.trg_embedding_weights]
-            self.trg_embedding_weights_trainable = params['TRG_PRETRAINED_VECTORS_TRAINABLE'] and params.get('TRAINABLE_DECODER', True)
+            self.trg_embedding_weights_trainable = params['TRG_PRETRAINED_VECTORS_TRAINABLE'] and params.get(
+                'TRAINABLE_DECODER', True)
             del trg_word_vectors
         else:
             self.trg_embedding_weights = None
@@ -121,7 +123,8 @@ class TranslationModel(Model_Wrapper):
 
         # Print information of self
         if verbose > 0:
-            print str(self)
+            print
+            str(self)
             self.model.summary()
         if set_optimizer:
             self.setOptimizer()
@@ -201,8 +204,13 @@ class TranslationModel(Model_Wrapper):
         else:
             logging.info('\tWARNING: The modification of the LR is not implemented for the chosen optimizer.')
             optimizer = eval(self.params['OPTIMIZER'])
+
+        if self.params['LOSS_WEIGHTS'][1] == 0:
+            self.params['LOSS_WEIGHTS'] = self.params['LOSS_WEIGHTS'][:-1]
+
         self.model.compile(optimizer=optimizer,
                            loss=self.params['LOSS'],
+                           loss_weights=self.params['LOSS_WEIGHTS'],
                            metrics=self.params.get('KERAS_METRICS', []),
                            sample_weight_mode='temporal' if self.params['SAMPLE_WEIGHTS'] else None)
 
@@ -278,7 +286,8 @@ class TranslationModel(Model_Wrapper):
                                                                              'RECURRENT_DROPOUT_P'],
                                                                          kernel_initializer=params['INIT_FUNCTION'],
                                                                          recurrent_initializer=params['INNER_INIT'],
-                                                                         trainable=params.get('TRAINABLE_ENCODER', True),
+                                                                         trainable=params.get('TRAINABLE_ENCODER',
+                                                                                              True),
                                                                          return_sequences=True),
                                         trainable=params.get('TRAINABLE_ENCODER', True),
                                         name='bidirectional_encoder_' + params['ENCODER_RNN_TYPE'],
@@ -300,26 +309,38 @@ class TranslationModel(Model_Wrapper):
         for n_layer in range(1, params['N_LAYERS_ENCODER']):
             if params['BIDIRECTIONAL_DEEP_ENCODER']:
                 current_annotations = Bidirectional(eval(params['ENCODER_RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
-                                                                                     kernel_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
-                                                                                     recurrent_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
-                                                                                     bias_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
-                                                                                     dropout=params['RECURRENT_INPUT_DROPOUT_P'],
-                                                                                     recurrent_dropout=params['RECURRENT_DROPOUT_P'],
-                                                                                     kernel_initializer=params['INIT_FUNCTION'],
-                                                                                     recurrent_initializer=params['INNER_INIT'],
-                                                                                     trainable=params.get('TRAINABLE_ENCODER', True),
+                                                                                     kernel_regularizer=l2(params[
+                                                                                                               'RECURRENT_WEIGHT_DECAY']),
+                                                                                     recurrent_regularizer=l2(params[
+                                                                                                                  'RECURRENT_WEIGHT_DECAY']),
+                                                                                     bias_regularizer=l2(params[
+                                                                                                             'RECURRENT_WEIGHT_DECAY']),
+                                                                                     dropout=params[
+                                                                                         'RECURRENT_INPUT_DROPOUT_P'],
+                                                                                     recurrent_dropout=params[
+                                                                                         'RECURRENT_DROPOUT_P'],
+                                                                                     kernel_initializer=params[
+                                                                                         'INIT_FUNCTION'],
+                                                                                     recurrent_initializer=params[
+                                                                                         'INNER_INIT'],
+                                                                                     trainable=params.get(
+                                                                                         'TRAINABLE_ENCODER', True),
                                                                                      return_sequences=True,
                                                                                      ),
                                                     merge_mode='concat',
                                                     trainable=params.get('TRAINABLE_ENCODER', True),
                                                     name='bidirectional_encoder_' + str(n_layer))(annotations)
                 current_annotations = Regularize(current_annotations, params, name='annotations_' + str(n_layer))
-                annotations = current_annotations if n_layer == 1 and not params['BIDIRECTIONAL_ENCODER'] else Add()([annotations, current_annotations])
+                annotations = current_annotations if n_layer == 1 and not params['BIDIRECTIONAL_ENCODER'] else Add()(
+                    [annotations, current_annotations])
             else:
                 current_annotations = eval(params['ENCODER_RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
-                                                                       kernel_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
-                                                                       recurrent_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
-                                                                       bias_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                                       kernel_regularizer=l2(
+                                                                           params['RECURRENT_WEIGHT_DECAY']),
+                                                                       recurrent_regularizer=l2(
+                                                                           params['RECURRENT_WEIGHT_DECAY']),
+                                                                       bias_regularizer=l2(
+                                                                           params['RECURRENT_WEIGHT_DECAY']),
                                                                        dropout=params['RECURRENT_INPUT_DROPOUT_P'],
                                                                        recurrent_dropout=params['RECURRENT_DROPOUT_P'],
                                                                        kernel_initializer=params['INIT_FUNCTION'],
@@ -328,7 +349,8 @@ class TranslationModel(Model_Wrapper):
                                                                        trainable=params.get('TRAINABLE_ENCODER', True),
                                                                        name='encoder_' + str(n_layer))(annotations)
                 current_annotations = Regularize(current_annotations, params, name='annotations_' + str(n_layer))
-                annotations = current_annotations if n_layer == 1 and params['BIDIRECTIONAL_ENCODER'] else Add()([annotations, current_annotations])
+                annotations = current_annotations if n_layer == 1 and params['BIDIRECTIONAL_ENCODER'] else Add()(
+                    [annotations, current_annotations])
 
         # 3. Decoder
         # 3.1.1. Previously generated words as inputs for training -> Teacher forcing
@@ -387,29 +409,44 @@ class TranslationModel(Model_Wrapper):
 
         # 3.3. Attentional decoder
         sharedAttRNNCond = eval('Att' + params['DECODER_RNN_TYPE'] + 'Cond')(params['DECODER_HIDDEN_SIZE'],
-                                                                             attention_mode=params.get('ATTENTION_MODE', 'add'),
+                                                                             attention_mode=params.get('ATTENTION_MODE',
+                                                                                                       'add'),
                                                                              att_units=params.get('ATTENTION_SIZE', 0),
-                                                                             kernel_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
-                                                                             recurrent_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
-                                                                             conditional_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
-                                                                             bias_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
-                                                                             attention_context_wa_regularizer=l2(params['WEIGHT_DECAY']),
-                                                                             attention_recurrent_regularizer=l2(params['WEIGHT_DECAY']),
-                                                                             attention_context_regularizer=l2(params['WEIGHT_DECAY']),
-                                                                             bias_ba_regularizer=l2(params['WEIGHT_DECAY']),
-                                                                             dropout=params['RECURRENT_INPUT_DROPOUT_P'],
-                                                                             recurrent_dropout=params['RECURRENT_DROPOUT_P'],
-                                                                             conditional_dropout=params['RECURRENT_INPUT_DROPOUT_P'],
+                                                                             kernel_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             recurrent_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             conditional_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             bias_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             attention_context_wa_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             attention_recurrent_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             attention_context_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             bias_ba_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             dropout=params[
+                                                                                 'RECURRENT_INPUT_DROPOUT_P'],
+                                                                             recurrent_dropout=params[
+                                                                                 'RECURRENT_DROPOUT_P'],
+                                                                             conditional_dropout=params[
+                                                                                 'RECURRENT_INPUT_DROPOUT_P'],
                                                                              attention_dropout=params['DROPOUT_P'],
                                                                              kernel_initializer=params['INIT_FUNCTION'],
                                                                              recurrent_initializer=params['INNER_INIT'],
-                                                                             attention_context_initializer=params['INIT_ATT'],
-                                                                             trainable=params.get('TRAINABLE_DECODER', True),
+                                                                             attention_context_initializer=params[
+                                                                                 'INIT_ATT'],
+                                                                             trainable=params.get('TRAINABLE_DECODER',
+                                                                                                  True),
                                                                              return_sequences=True,
                                                                              return_extra_variables=True,
                                                                              return_states=True,
                                                                              num_inputs=len(input_attentional_decoder),
-                                                                             name='decoder_Att' + params['DECODER_RNN_TYPE'] + 'Cond')
+                                                                             name='decoder_Att' + params[
+                                                                                 'DECODER_RNN_TYPE'] + 'Cond')
 
         rnn_output = sharedAttRNNCond(input_attentional_decoder)
         proj_h = rnn_output[0]
@@ -575,7 +612,8 @@ class TranslationModel(Model_Wrapper):
         #   - softmax probabilities
         #   - next_state
         preprocessed_size = params['ENCODER_HIDDEN_SIZE'] * 2 if \
-            (params['BIDIRECTIONAL_ENCODER'] and params['N_LAYERS_ENCODER'] == 1) or (params['BIDIRECTIONAL_DEEP_ENCODER'] and params['N_LAYERS_ENCODER'] > 1) \
+            (params['BIDIRECTIONAL_ENCODER'] and params['N_LAYERS_ENCODER'] == 1) or (
+                        params['BIDIRECTIONAL_DEEP_ENCODER'] and params['N_LAYERS_ENCODER'] > 1) \
             else params['ENCODER_HIDDEN_SIZE']
         # Define inputs
         n_deep_decoder_layer_idx = 0
@@ -674,6 +712,7 @@ class TranslationModel(Model_Wrapper):
                 self.ids_outputs_next.append('next_memory_' + str(n_memory))
                 self.matchings_init_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
                 self.matchings_next_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
+
     # Backwards compatibility.
     GroundHogModel = AttentionRNNEncoderDecoder
 
@@ -1080,7 +1119,8 @@ class TranslationModel(Model_Wrapper):
         #   - softmax probabilities
         #   - next_state
         preprocessed_size = params['ENCODER_HIDDEN_SIZE'] * 2 if \
-            (params['BIDIRECTIONAL_ENCODER'] and params['N_LAYERS_ENCODER'] == 1) or (params['BIDIRECTIONAL_DEEP_ENCODER'] and params['N_LAYERS_ENCODER'] > 1) \
+            (params['BIDIRECTIONAL_ENCODER'] and params['N_LAYERS_ENCODER'] == 1) or (
+                        params['BIDIRECTIONAL_DEEP_ENCODER'] and params['N_LAYERS_ENCODER'] > 1) \
             else params['ENCODER_HIDDEN_SIZE']
         # Define inputs
         n_deep_decoder_layer_idx = 0
@@ -1670,6 +1710,8 @@ class TranslationModel(Model_Wrapper):
             * Last word projected to output
             * Possibly deep encoder/decoder
 
+        MULTITASK MODEL. All parameters but the softmax layer are shared across the outputs.
+
         See https://arxiv.org/abs/1409.0473 for an in-depth review of the model.
 
         :param params: Dictionary of params (see config.py)
@@ -1781,7 +1823,7 @@ class TranslationModel(Model_Wrapper):
                                 trainable=self.trg_embedding_weights_trainable,
                                 weights=self.trg_embedding_weights,
                                 mask_zero=True)(next_words)
-        #state_below = Lambda(lambda x:x, name= 'VIEW_LAYER', mask=lambda x,m: K.printing(x, "THIS_IS_STATE_BELOW= "))(state_below)
+        # state_below = Lambda(lambda x:x, name= 'VIEW_LAYER', mask=lambda x,m: K.printing(x, "THIS_IS_STATE_BELOW= "))(state_below)
         state_below = Regularize(state_below, params, name='state_below')
 
         # 3.2. Decoder's RNN initialization perceptrons with ctx mean
@@ -1996,18 +2038,29 @@ class TranslationModel(Model_Wrapper):
 
         # 3.7.2 Output layer 2: Softmax
 
-        shared_FC_soft2 = TimeDistributed(Dense(params['OUTPUT_VOCABULARY_SIZE'][1],
-                                               activation=params['CLASSIFIER_ACTIVATION'],
-                                               kernel_regularizer=l2(params['WEIGHT_DECAY']),
-                                               bias_regularizer=l2(params['WEIGHT_DECAY']),
-                                               trainable=params.get('TRAINABLE_DECODER', True),
-                                               name=params['CLASSIFIER_ACTIVATION']+'2'
-                                               ),
-                                         trainable=params.get('TRAINABLE_DECODER', True),
-                                         name=self.ids_outputs[1])
+        if params['LOSS_WEIGHTS'][1] == 0:
+            name_soft_layer = self.ids_outputs[0] + '2'
+        else:
+            name_soft_layer = self.ids_outputs[1]
+
+        out_soft_size = params['OUTPUT_VOCABULARY_SIZE'][1] if params['LOSS_WEIGHTS'][1] != 0 else 689
+        shared_FC_soft2 = TimeDistributed(Dense(out_soft_size,
+                                                activation=params['CLASSIFIER_ACTIVATION'],
+                                                kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                                bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                                trainable=params.get('TRAINABLE_DECODER', True),
+                                                name=params['CLASSIFIER_ACTIVATION'] + '2'
+                                                ),
+                                          trainable=params.get('TRAINABLE_DECODER', True),
+                                          name=name_soft_layer)
         softout2 = shared_FC_soft2(out_layer)
 
-        self.model = Model(inputs=[src_text, next_words], outputs=[softout, softout2])
+        if params['LOSS_WEIGHTS'][1] == 0:
+            model_output = [softout]
+        else:
+            model_output = [softout, softout2]
+
+        self.model = Model(inputs=[src_text, next_words], outputs=model_output)
 
         if params['DOUBLE_STOCHASTIC_ATTENTION_REG'] > 0.:
             self.model.add_loss(alpha_regularizer)
@@ -2020,7 +2073,13 @@ class TranslationModel(Model_Wrapper):
         # First, we need a model that outputs the preprocessed input + initial h state
         # for applying the initial forward pass
         model_init_input = [src_text, next_words]
-        model_init_output = [softout, softout2, annotations] + h_states_list
+
+        if params['LOSS_WEIGHTS'][1] == 0:
+            model_output = [softout]
+        else:
+            model_output = [softout, softout2]
+
+        model_init_output = model_output + [annotations] + h_states_list
         if 'LSTM' in params['DECODER_RNN_TYPE']:
             model_init_output += h_memories_list
         if self.return_alphas:
@@ -2045,7 +2104,7 @@ class TranslationModel(Model_Wrapper):
         #   - next_state
         preprocessed_size = params['ENCODER_HIDDEN_SIZE'] * 2 if \
             (params['BIDIRECTIONAL_ENCODER'] and params['N_LAYERS_ENCODER'] == 1) or (
-                        params['BIDIRECTIONAL_DEEP_ENCODER'] and params['N_LAYERS_ENCODER'] > 1) \
+                    params['BIDIRECTIONAL_DEEP_ENCODER'] and params['N_LAYERS_ENCODER'] > 1) \
             else params['ENCODER_HIDDEN_SIZE']
         # Define inputs
         n_deep_decoder_layer_idx = 0
@@ -2111,7 +2170,576 @@ class TranslationModel(Model_Wrapper):
 
         # Softmax
         softout = shared_FC_soft(out_layer)
-        softout2 = shared_FC_soft2(out_layer) # Second Softmax - Character level
+        softout2 = shared_FC_soft2(out_layer)  # Second Softmax - Character level
+
+        model_next_inputs = [next_words, preprocessed_annotations] + prev_h_states_list
+
+        if params['LOSS_WEIGHTS'][1] == 0:
+            model_next_outputs = [softout, preprocessed_annotations] + h_states_list
+        else:
+            model_next_outputs = [softout, softout2, preprocessed_annotations] + h_states_list
+
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            model_next_inputs += prev_h_memories_list
+            model_next_outputs += h_memories_list
+
+        if self.return_alphas:
+            model_next_outputs.append(alphas)
+
+        self.model_next = Model(inputs=model_next_inputs,
+                                outputs=model_next_outputs)
+        # Store inputs and outputs names for model_next
+        # first input must be previous word
+        self.ids_inputs_next = [self.ids_inputs[1]] + ['preprocessed_input']
+        # first output must be the output probs.
+        self.ids_outputs_next = self.ids_outputs + ['preprocessed_input']
+        # Input -> Output matchings from model_init to model_next and from model_next to model_next
+        self.matchings_init_to_next = {'preprocessed_input': 'preprocessed_input'}
+        self.matchings_next_to_next = {'preprocessed_input': 'preprocessed_input'}
+        # append all next states and matchings
+
+        for n_state in range(len(prev_h_states_list)):
+            self.ids_inputs_next.append('prev_state_' + str(n_state))
+            self.ids_outputs_next.append('next_state_' + str(n_state))
+            self.matchings_init_to_next['next_state_' + str(n_state)] = 'prev_state_' + str(n_state)
+            self.matchings_next_to_next['next_state_' + str(n_state)] = 'prev_state_' + str(n_state)
+
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            for n_memory in range(len(prev_h_memories_list)):
+                self.ids_inputs_next.append('prev_memory_' + str(n_memory))
+                self.ids_outputs_next.append('next_memory_' + str(n_memory))
+                self.matchings_init_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
+                self.matchings_next_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
+
+    def MultitaskDecoder(self, params):
+        """
+        Neural machine translation with:
+            * BRNN encoder
+            * Attention mechansim on input sequence of annotations
+            * Conditional RNN for decoding
+            * Deep output layers:
+            * Context projected to output
+            * Last word projected to output
+            * Possibly deep encoder/decoder
+
+        MULTITASK MODEL. All parameters but the softmax layer and the decoder are shared across the outputs.
+
+        See https://arxiv.org/abs/1409.0473 for an in-depth review of the model.
+
+        :param params: Dictionary of params (see config.py)
+        :return: None
+        """
+
+        # 1. Source text input
+        src_text = Input(name=self.ids_inputs[0], batch_shape=tuple([None, None]), dtype='int32')
+        # 2. Encoder
+        # 2.1. Source word embedding
+        src_embedding = Embedding(params['INPUT_VOCABULARY_SIZE'], params['SOURCE_TEXT_EMBEDDING_SIZE'],
+                                  name='source_word_embedding',
+                                  embeddings_regularizer=l2(params['WEIGHT_DECAY']),
+                                  embeddings_initializer=params['INIT_FUNCTION'],
+                                  trainable=self.src_embedding_weights_trainable,
+                                  weights=self.src_embedding_weights,
+                                  mask_zero=True)(src_text)
+        src_embedding = Regularize(src_embedding, params, name='src_embedding')
+
+        # 2.2. BRNN encoder (GRU/LSTM)
+        if params['BIDIRECTIONAL_ENCODER']:
+            annotations = Bidirectional(eval(params['ENCODER_RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
+                                                                         kernel_regularizer=l2(
+                                                                             params['RECURRENT_WEIGHT_DECAY']),
+                                                                         recurrent_regularizer=l2(
+                                                                             params['RECURRENT_WEIGHT_DECAY']),
+                                                                         bias_regularizer=l2(
+                                                                             params['RECURRENT_WEIGHT_DECAY']),
+                                                                         dropout=params['RECURRENT_INPUT_DROPOUT_P'],
+                                                                         recurrent_dropout=params[
+                                                                             'RECURRENT_DROPOUT_P'],
+                                                                         kernel_initializer=params['INIT_FUNCTION'],
+                                                                         recurrent_initializer=params['INNER_INIT'],
+                                                                         trainable=params.get('TRAINABLE_ENCODER',
+                                                                                              True),
+                                                                         return_sequences=True),
+                                        trainable=params.get('TRAINABLE_ENCODER', True),
+                                        name='bidirectional_encoder_' + params['ENCODER_RNN_TYPE'],
+                                        merge_mode='concat')(src_embedding)
+        else:
+            annotations = eval(params['ENCODER_RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
+                                                           kernel_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                           recurrent_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                           bias_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                           dropout=params['RECURRENT_INPUT_DROPOUT_P'],
+                                                           recurrent_dropout=params['RECURRENT_DROPOUT_P'],
+                                                           kernel_initializer=params['INIT_FUNCTION'],
+                                                           recurrent_initializer=params['INNER_INIT'],
+                                                           trainable=params.get('TRAINABLE_ENCODER', True),
+                                                           return_sequences=True,
+                                                           name='encoder_' + params['ENCODER_RNN_TYPE'])(src_embedding)
+        annotations = Regularize(annotations, params, name='annotations')
+        # 2.3. Potentially deep encoder
+        for n_layer in range(1, params['N_LAYERS_ENCODER']):
+            if params['BIDIRECTIONAL_DEEP_ENCODER']:
+                current_annotations = Bidirectional(eval(params['ENCODER_RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
+                                                                                     kernel_regularizer=l2(params[
+                                                                                                               'RECURRENT_WEIGHT_DECAY']),
+                                                                                     recurrent_regularizer=l2(params[
+                                                                                                                  'RECURRENT_WEIGHT_DECAY']),
+                                                                                     bias_regularizer=l2(params[
+                                                                                                             'RECURRENT_WEIGHT_DECAY']),
+                                                                                     dropout=params[
+                                                                                         'RECURRENT_INPUT_DROPOUT_P'],
+                                                                                     recurrent_dropout=params[
+                                                                                         'RECURRENT_DROPOUT_P'],
+                                                                                     kernel_initializer=params[
+                                                                                         'INIT_FUNCTION'],
+                                                                                     recurrent_initializer=params[
+                                                                                         'INNER_INIT'],
+                                                                                     trainable=params.get(
+                                                                                         'TRAINABLE_ENCODER', True),
+                                                                                     return_sequences=True,
+                                                                                     ),
+                                                    merge_mode='concat',
+                                                    trainable=params.get('TRAINABLE_ENCODER', True),
+                                                    name='bidirectional_encoder_' + str(n_layer))(annotations)
+                current_annotations = Regularize(current_annotations, params, name='annotations_' + str(n_layer))
+                annotations = current_annotations if n_layer == 1 and not params['BIDIRECTIONAL_ENCODER'] else Add()(
+                    [annotations, current_annotations])
+            else:
+                current_annotations = eval(params['ENCODER_RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
+                                                                       kernel_regularizer=l2(
+                                                                           params['RECURRENT_WEIGHT_DECAY']),
+                                                                       recurrent_regularizer=l2(
+                                                                           params['RECURRENT_WEIGHT_DECAY']),
+                                                                       bias_regularizer=l2(
+                                                                           params['RECURRENT_WEIGHT_DECAY']),
+                                                                       dropout=params['RECURRENT_INPUT_DROPOUT_P'],
+                                                                       recurrent_dropout=params['RECURRENT_DROPOUT_P'],
+                                                                       kernel_initializer=params['INIT_FUNCTION'],
+                                                                       recurrent_initializer=params['INNER_INIT'],
+                                                                       return_sequences=True,
+                                                                       trainable=params.get('TRAINABLE_ENCODER', True),
+                                                                       name='encoder_' + str(n_layer))(annotations)
+                current_annotations = Regularize(current_annotations, params, name='annotations_' + str(n_layer))
+                annotations = current_annotations if n_layer == 1 and params['BIDIRECTIONAL_ENCODER'] else Add()(
+                    [annotations, current_annotations])
+
+        # 3. Decoder
+        # 3.1.1. Previously generated words as inputs for training -> Teacher forcing
+        # Use characters to see what happens
+        next_words = Input(name=self.ids_inputs[1], batch_shape=tuple([None, None]), dtype='int32')
+        # 3.1.2. Target word embedding
+        state_below = Embedding(params['OUTPUT_VOCABULARY_SIZE'][0], params['TARGET_TEXT_EMBEDDING_SIZE'][0],
+                                name='target_word_embedding',
+                                embeddings_regularizer=l2(params['WEIGHT_DECAY']),
+                                embeddings_initializer=params['INIT_FUNCTION'],
+                                trainable=self.trg_embedding_weights_trainable,
+                                weights=self.trg_embedding_weights,
+                                mask_zero=True)(next_words)
+        # state_below = Lambda(lambda x:x, name= 'VIEW_LAYER', mask=lambda x,m: K.printing(x, "THIS_IS_STATE_BELOW= "))(state_below)
+        state_below = Regularize(state_below, params, name='state_below')
+
+        # 3.2. Decoder's RNN initialization perceptrons with ctx mean
+        ctx_mean = MaskedMean()(annotations)
+        annotations = MaskLayer()(annotations)  # We may want the padded annotations
+
+        if len(params['INIT_LAYERS']) > 0:
+            for n_layer_init in range(len(params['INIT_LAYERS']) - 1):
+                ctx_mean = Dense(params['DECODER_HIDDEN_SIZE'], name='init_layer_%d' % n_layer_init,
+                                 kernel_initializer=params['INIT_FUNCTION'],
+                                 kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                 bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                 trainable=params.get('TRAINABLE_DECODER', True),
+                                 activation=params['INIT_LAYERS'][n_layer_init]
+                                 )(ctx_mean)
+                ctx_mean = Regularize(ctx_mean, params, name='ctx' + str(n_layer_init))
+
+            initial_state = Dense(params['DECODER_HIDDEN_SIZE'], name='initial_state',
+                                  kernel_initializer=params['INIT_FUNCTION'],
+                                  kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                  bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                  trainable=params.get('TRAINABLE_DECODER', True),
+                                  activation=params['INIT_LAYERS'][-1]
+                                  )(ctx_mean)
+            initial_state = Regularize(initial_state, params, name='initial_state')
+            input_attentional_decoder = [state_below, annotations, initial_state]
+
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                initial_memory = Dense(params['DECODER_HIDDEN_SIZE'], name='initial_memory',
+                                       kernel_initializer=params['INIT_FUNCTION'],
+                                       kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                       bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                       trainable=params.get('TRAINABLE_DECODER', True),
+                                       activation=params['INIT_LAYERS'][-1])(ctx_mean)
+                initial_memory = Regularize(initial_memory, params, name='initial_memory')
+                input_attentional_decoder.append(initial_memory)
+        else:
+            # Initialize to zeros vector
+            input_attentional_decoder = [state_below, annotations]
+            initial_state = ZeroesLayer(params['DECODER_HIDDEN_SIZE'])(ctx_mean)
+            input_attentional_decoder.append(initial_state)
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                input_attentional_decoder.append(initial_state)
+
+        # 3.3. Attentional decoder
+        sharedAttRNNCond = eval('Att' + params['DECODER_RNN_TYPE'] + 'Cond')(params['DECODER_HIDDEN_SIZE'],
+                                                                             attention_mode=params.get('ATTENTION_MODE',
+                                                                                                       'add'),
+                                                                             att_units=params.get('ATTENTION_SIZE', 0),
+                                                                             kernel_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             recurrent_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             conditional_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             bias_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             attention_context_wa_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             attention_recurrent_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             attention_context_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             bias_ba_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             dropout=params[
+                                                                                 'RECURRENT_INPUT_DROPOUT_P'],
+                                                                             recurrent_dropout=params[
+                                                                                 'RECURRENT_DROPOUT_P'],
+                                                                             conditional_dropout=params[
+                                                                                 'RECURRENT_INPUT_DROPOUT_P'],
+                                                                             attention_dropout=params['DROPOUT_P'],
+                                                                             kernel_initializer=params['INIT_FUNCTION'],
+                                                                             recurrent_initializer=params['INNER_INIT'],
+                                                                             attention_context_initializer=params[
+                                                                                 'INIT_ATT'],
+                                                                             trainable=params.get('TRAINABLE_DECODER',
+                                                                                                  True),
+                                                                             return_sequences=True,
+                                                                             return_extra_variables=True,
+                                                                             return_states=True,
+                                                                             num_inputs=len(input_attentional_decoder),
+                                                                             name='decoder_Att' + params[
+                                                                                 'DECODER_RNN_TYPE'] + 'Cond')
+
+        # TODO: Replicate using for bucle for any given number of outputs
+        # 3.3. Attentional decoder. Second decoder
+        sharedAttRNNCond2 = eval('Att' + params['DECODER_RNN_TYPE'] + 'Cond')(params['DECODER_HIDDEN_SIZE'],
+                                                                              attention_mode=params.get(
+                                                                                  'ATTENTION_MODE',
+                                                                                  'add'),
+                                                                              att_units=params.get('ATTENTION_SIZE', 0),
+                                                                              kernel_regularizer=l2(
+                                                                                  params['RECURRENT_WEIGHT_DECAY']),
+                                                                              recurrent_regularizer=l2(
+                                                                                  params['RECURRENT_WEIGHT_DECAY']),
+                                                                              conditional_regularizer=l2(
+                                                                                  params['RECURRENT_WEIGHT_DECAY']),
+                                                                              bias_regularizer=l2(
+                                                                                  params['RECURRENT_WEIGHT_DECAY']),
+                                                                              attention_context_wa_regularizer=l2(
+                                                                                  params['WEIGHT_DECAY']),
+                                                                              attention_recurrent_regularizer=l2(
+                                                                                  params['WEIGHT_DECAY']),
+                                                                              attention_context_regularizer=l2(
+                                                                                  params['WEIGHT_DECAY']),
+                                                                              bias_ba_regularizer=l2(
+                                                                                  params['WEIGHT_DECAY']),
+                                                                              dropout=params[
+                                                                                  'RECURRENT_INPUT_DROPOUT_P'],
+                                                                              recurrent_dropout=params[
+                                                                                  'RECURRENT_DROPOUT_P'],
+                                                                              conditional_dropout=params[
+                                                                                  'RECURRENT_INPUT_DROPOUT_P'],
+                                                                              attention_dropout=params['DROPOUT_P'],
+                                                                              kernel_initializer=params[
+                                                                                  'INIT_FUNCTION'],
+                                                                              recurrent_initializer=params[
+                                                                                  'INNER_INIT'],
+                                                                              attention_context_initializer=params[
+                                                                                  'INIT_ATT'],
+                                                                              trainable=params.get('TRAINABLE_DECODER',
+                                                                                                   True),
+                                                                              return_sequences=True,
+                                                                              return_extra_variables=True,
+                                                                              return_states=True,
+                                                                              num_inputs=len(input_attentional_decoder),
+                                                                              name='decoder_Att2' + params[
+                                                                                  'DECODER_RNN_TYPE'] + 'Cond')
+
+        rnn_output = sharedAttRNNCond(input_attentional_decoder)
+        proj_h = rnn_output[0]
+        x_att = rnn_output[1]
+        alphas = rnn_output[2]
+        h_state = rnn_output[3]
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            h_memory = rnn_output[4]
+        shared_Lambda_Permute = PermuteGeneral((1, 0, 2))
+
+        rnn_output2 = sharedAttRNNCond2(input_attentional_decoder)
+        proj_h2 = rnn_output2[0]
+        x_att2 = rnn_output2[1]
+        alphas2 = rnn_output2[2]
+        h_state2 = rnn_output2[3]
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            h_memory2 = rnn_output2[4]
+
+        if params['DOUBLE_STOCHASTIC_ATTENTION_REG'] > 0:
+            alpha_regularizer = AlphaRegularizer(alpha_factor=params['DOUBLE_STOCHASTIC_ATTENTION_REG'])(alphas)
+            alpha_regularizer2 = AlphaRegularizer(alpha_factor=params['DOUBLE_STOCHASTIC_ATTENTION_REG'])(alphas2)
+
+        [proj_h, shared_reg_proj_h] = Regularize(proj_h, params, shared_layers=True, name='proj_h0')
+        [proj_h2, shared_reg_proj_h2] = Regularize(proj_h2, params, shared_layers=True, name='proj_h02')
+
+        # 3.4. Possibly deep decoder
+        # TODO: Replicate code for second decoder
+        shared_proj_h_list = []
+        shared_reg_proj_h_list = []
+
+        h_states_list = [h_state]
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            h_memories_list = [h_memory]
+
+        for n_layer in range(1, params['N_LAYERS_DECODER']):
+            current_rnn_input = [proj_h, shared_Lambda_Permute(x_att), initial_state]
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                current_rnn_input.append(initial_memory)
+            shared_proj_h_list.append(eval(params['DECODER_RNN_TYPE'].replace('Conditional', '') + 'Cond')(
+                params['DECODER_HIDDEN_SIZE'],
+                kernel_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                recurrent_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                conditional_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                bias_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                dropout=params['RECURRENT_DROPOUT_P'],
+                recurrent_dropout=params['RECURRENT_INPUT_DROPOUT_P'],
+                conditional_dropout=params['RECURRENT_INPUT_DROPOUT_P'],
+                kernel_initializer=params['INIT_FUNCTION'],
+                recurrent_initializer=params['INNER_INIT'],
+                return_sequences=True,
+                return_states=True,
+                trainable=params.get('TRAINABLE_DECODER', True),
+                num_inputs=len(current_rnn_input),
+                name='decoder_' + params['DECODER_RNN_TYPE'].replace('Conditional', '') + 'Cond' + str(n_layer)))
+
+            current_rnn_output = shared_proj_h_list[-1](current_rnn_input)
+            current_proj_h = current_rnn_output[0]
+            h_states_list.append(current_rnn_output[1])
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                h_memories_list.append(current_rnn_output[2])
+            [current_proj_h, shared_reg_proj_h] = Regularize(current_proj_h, params, shared_layers=True,
+                                                             name='proj_h' + str(n_layer))
+            shared_reg_proj_h_list.append(shared_reg_proj_h)
+
+            proj_h = Add()([proj_h, current_proj_h])
+
+        # 3.5. Skip connections between encoder and output layer
+        shared_FC_mlp = TimeDistributed(Dense(params['SKIP_VECTORS_HIDDEN_SIZE'],
+                                              kernel_initializer=params['INIT_FUNCTION'],
+                                              kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                              bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                              trainable=params.get('TRAINABLE_DECODER', True),
+                                              activation='linear'),
+                                        trainable=params.get('TRAINABLE_DECODER', True),
+                                        name='logit_lstm')
+        out_layer_mlp = shared_FC_mlp(proj_h)
+        out_layer_mlp2 = shared_FC_mlp(proj_h2)
+
+        shared_FC_ctx = TimeDistributed(Dense(params['SKIP_VECTORS_HIDDEN_SIZE'],
+                                              kernel_initializer=params['INIT_FUNCTION'],
+                                              kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                              bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                              trainable=params.get('TRAINABLE_DECODER', True),
+                                              activation='linear'),
+                                        trainable=params.get('TRAINABLE_DECODER', True),
+                                        name='logit_ctx')
+        out_layer_ctx = shared_FC_ctx(x_att)
+        out_layer_ctx = shared_Lambda_Permute(out_layer_ctx)
+        out_layer_ctx2 = shared_FC_ctx(x_att2)
+        out_layer_ctx2 = shared_Lambda_Permute(out_layer_ctx2)
+        shared_FC_emb = TimeDistributed(Dense(params['SKIP_VECTORS_HIDDEN_SIZE'],
+                                              kernel_initializer=params['INIT_FUNCTION'],
+                                              kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                              bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                              trainable=params.get('TRAINABLE_DECODER', True),
+                                              activation='linear'),
+                                        trainable=params.get('TRAINABLE_DECODER', True),
+                                        name='logit_emb')
+        out_layer_emb = shared_FC_emb(state_below)
+
+        [out_layer_mlp, shared_reg_out_layer_mlp] = Regularize(out_layer_mlp, params,
+                                                               shared_layers=True, name='out_layer_mlp')
+        [out_layer_ctx, shared_reg_out_layer_ctx] = Regularize(out_layer_ctx, params,
+                                                               shared_layers=True, name='out_layer_ctx')
+        [out_layer_emb, shared_reg_out_layer_emb] = Regularize(out_layer_emb, params,
+                                                               shared_layers=True, name='out_layer_emb')
+
+        [out_layer_mlp2, shared_reg_out_layer_mlp2] = Regularize(out_layer_mlp2, params,
+                                                                 shared_layers=True, name='out_layer_mlp2')
+        [out_layer_ctx2, shared_reg_out_layer_ctx2] = Regularize(out_layer_ctx2, params,
+                                                                 shared_layers=True, name='out_layer_ctx2')
+
+        shared_additional_output_merge = eval(params['ADDITIONAL_OUTPUT_MERGE_MODE'])(name='additional_input')
+        additional_output = shared_additional_output_merge([out_layer_mlp, out_layer_ctx, out_layer_emb])
+        additional_output2 = shared_additional_output_merge([out_layer_mlp2, out_layer_ctx2, out_layer_emb])
+        shared_activation = Activation(params.get('SKIP_VECTORS_SHARED_ACTIVATION', 'tanh'))
+
+        out_layer = shared_activation(additional_output)
+
+        out_layer2 = shared_activation(additional_output2)
+
+        shared_deep_list = []
+        shared_reg_deep_list = []
+        # 3.6 Optional deep ouput layer
+        for i, (activation, dimension) in enumerate(params['DEEP_OUTPUT_LAYERS']):
+            shared_deep_list.append(TimeDistributed(Dense(dimension, activation=activation,
+                                                          kernel_initializer=params['INIT_FUNCTION'],
+                                                          kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                                          bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                                          trainable=params.get('TRAINABLE_DECODER', True),
+                                                          ),
+                                                    trainable=params.get('TRAINABLE_DECODER', True),
+                                                    name=activation + '_%d' % i))
+            out_layer = shared_deep_list[-1](out_layer)
+            out_layer2 = shared_deep_list[-1](out_layer2)
+            [out_layer, shared_reg_out_layer] = Regularize(out_layer,
+                                                           params, shared_layers=True,
+                                                           name='out_layer_' + str(activation) + '_%d' % i)
+            shared_reg_deep_list.append(shared_reg_out_layer)
+
+            [out_layer2, shared_reg_out_layer2] = Regularize(out_layer2,
+                                                             params, shared_layers=True,
+                                                             name='out_layer2_' + str(activation) + '_%d' % i)
+            shared_reg_deep_list.append(shared_reg_out_layer2)
+
+        # 3.7.1 Output layer: Softmax
+        shared_FC_soft = TimeDistributed(Dense(params['OUTPUT_VOCABULARY_SIZE'][0],
+                                               activation=params['CLASSIFIER_ACTIVATION'],
+                                               kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                               bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                               trainable=params.get('TRAINABLE_DECODER', True),
+                                               name=params['CLASSIFIER_ACTIVATION']
+                                               ),
+                                         trainable=params.get('TRAINABLE_DECODER', True),
+                                         name=self.ids_outputs[0])
+        softout = shared_FC_soft(out_layer)
+
+        # 3.7.2 Output layer 2: Softmax
+
+        shared_FC_soft2 = TimeDistributed(Dense(params['OUTPUT_VOCABULARY_SIZE'][1],
+                                                activation=params['CLASSIFIER_ACTIVATION'],
+                                                kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                                bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                                trainable=params.get('TRAINABLE_DECODER', True),
+                                                name=params['CLASSIFIER_ACTIVATION'] + '2'
+                                                ),
+                                          trainable=params.get('TRAINABLE_DECODER', True),
+                                          name=self.ids_outputs[1])
+        softout2 = shared_FC_soft2(out_layer2)
+
+        self.model = Model(inputs=[src_text, next_words], outputs=[softout, softout2])
+
+        if params['DOUBLE_STOCHASTIC_ATTENTION_REG'] > 0.:
+            self.model.add_loss(alpha_regularizer)
+        ##################################################################
+        #                         SAMPLING MODEL                         #
+        ##################################################################
+        # Now that we have the basic training model ready, let's prepare the model for applying decoding
+        # The beam-search model will include all the minimum required set of layers (decoder stage) which offer the
+        # possibility to generate the next state in the sequence given a pre-processed input (encoder stage)
+        # First, we need a model that outputs the preprocessed input + initial h state
+        # for applying the initial forward pass
+        model_init_input = [src_text, next_words]
+        model_init_output = [softout, softout2, annotations] + h_states_list
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            model_init_output += h_memories_list
+        if self.return_alphas:
+            model_init_output.append(alphas)
+        self.model_init = Model(inputs=model_init_input, outputs=model_init_output)
+
+        # Store inputs and outputs names for model_init
+        self.ids_inputs_init = self.ids_inputs
+        ids_states_names = ['next_state_' + str(i) for i in range(len(h_states_list))]
+
+        # first output must be the output probs.
+        self.ids_outputs_init = self.ids_outputs + ['preprocessed_input'] + ids_states_names
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            ids_memories_names = ['next_memory_' + str(i) for i in range(len(h_memories_list))]
+            self.ids_outputs_init += ids_memories_names
+        # Second, we need to build an additional model with the capability to have the following inputs:
+        #   - preprocessed_input
+        #   - prev_word
+        #   - prev_state
+        # and the following outputs:
+        #   - softmax probabilities
+        #   - next_state
+        preprocessed_size = params['ENCODER_HIDDEN_SIZE'] * 2 if \
+            (params['BIDIRECTIONAL_ENCODER'] and params['N_LAYERS_ENCODER'] == 1) or (
+                    params['BIDIRECTIONAL_DEEP_ENCODER'] and params['N_LAYERS_ENCODER'] > 1) \
+            else params['ENCODER_HIDDEN_SIZE']
+        # Define inputs
+        n_deep_decoder_layer_idx = 0
+        preprocessed_annotations = Input(name='preprocessed_input', shape=tuple([None, preprocessed_size]))
+        prev_h_states_list = [Input(name='prev_state_' + str(i),
+                                    shape=tuple([params['DECODER_HIDDEN_SIZE']]))
+                              for i in range(len(h_states_list))]
+
+        input_attentional_decoder = [state_below, preprocessed_annotations,
+                                     prev_h_states_list[n_deep_decoder_layer_idx]]
+
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            prev_h_memories_list = [Input(name='prev_memory_' + str(i),
+                                          shape=tuple([params['DECODER_HIDDEN_SIZE']]))
+                                    for i in range(len(h_memories_list))]
+
+            input_attentional_decoder.append(prev_h_memories_list[n_deep_decoder_layer_idx])
+        # Apply decoder
+        rnn_output = sharedAttRNNCond(input_attentional_decoder)
+        proj_h = rnn_output[0]
+        x_att = rnn_output[1]
+        alphas = rnn_output[2]
+        h_states_list = [rnn_output[3]]
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            h_memories_list = [rnn_output[4]]
+        for reg in shared_reg_proj_h:
+            proj_h = reg(proj_h)
+
+        for (rnn_decoder_layer, proj_h_reg) in zip(shared_proj_h_list, shared_reg_proj_h_list):
+            n_deep_decoder_layer_idx += 1
+            input_rnn_decoder_layer = [proj_h, shared_Lambda_Permute(x_att),
+                                       prev_h_states_list[n_deep_decoder_layer_idx]]
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                input_rnn_decoder_layer.append(prev_h_memories_list[n_deep_decoder_layer_idx])
+
+            current_rnn_output = rnn_decoder_layer(input_rnn_decoder_layer)
+            current_proj_h = current_rnn_output[0]
+            h_states_list.append(current_rnn_output[1])  # h_state
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                h_memories_list.append(current_rnn_output[2])  # h_memory
+            for reg in proj_h_reg:
+                current_proj_h = reg(current_proj_h)
+            proj_h = Add()([proj_h, current_proj_h])
+        out_layer_mlp = shared_FC_mlp(proj_h)
+        out_layer_ctx = shared_FC_ctx(x_att)
+        out_layer_ctx = shared_Lambda_Permute(out_layer_ctx)
+        out_layer_emb = shared_FC_emb(state_below)
+
+        for (reg_out_layer_mlp, reg_out_layer_ctx, reg_out_layer_emb) in zip(shared_reg_out_layer_mlp,
+                                                                             shared_reg_out_layer_ctx,
+                                                                             shared_reg_out_layer_emb):
+            out_layer_mlp = reg_out_layer_mlp(out_layer_mlp)
+            out_layer_ctx = reg_out_layer_ctx(out_layer_ctx)
+            out_layer_emb = reg_out_layer_emb(out_layer_emb)
+
+        additional_output = shared_additional_output_merge([out_layer_mlp, out_layer_ctx, out_layer_emb])
+        out_layer = shared_activation(additional_output)
+
+        for (deep_out_layer, reg_list) in zip(shared_deep_list, shared_reg_deep_list):
+            out_layer = deep_out_layer(out_layer)
+            for reg in reg_list:
+                out_layer = reg(out_layer)
+
+        # Softmax
+        softout = shared_FC_soft(out_layer)
+        softout2 = shared_FC_soft2(out_layer)  # Second Softmax - Character level
         model_next_inputs = [next_words, preprocessed_annotations] + prev_h_states_list
         model_next_outputs = [softout, softout2, preprocessed_annotations] + h_states_list
         if 'LSTM' in params['DECODER_RNN_TYPE']:
@@ -2146,9 +2774,565 @@ class TranslationModel(Model_Wrapper):
                 self.matchings_init_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
                 self.matchings_next_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
 
+    def MultitaskAttention(self, params):
+        """
+        Neural machine translation with:
+            * BRNN encoder
+            * Attention mechansim on input sequence of annotations
+            * Conditional RNN for decoding
+            * Deep output layers:
+            * Context projected to output
+            * Last word projected to output
+            * Possibly deep encoder/decoder
 
+        MULTITASK MODEL. All parameters but the softmax layer, the decoder and the atteion mechanism are shared across the outputs.
 
+        See https://arxiv.org/abs/1409.0473 for an in-depth review of the model.
 
+        :param params: Dictionary of params (see config.py)
+        :return: None
+        """
 
+        # 1. Source text input
+        src_text = Input(name=self.ids_inputs[0], batch_shape=tuple([None, None]), dtype='int32')
+        # 2. Encoder
+        # 2.1. Source word embedding
+        src_embedding = Embedding(params['INPUT_VOCABULARY_SIZE'], params['SOURCE_TEXT_EMBEDDING_SIZE'],
+                                  name='source_word_embedding',
+                                  embeddings_regularizer=l2(params['WEIGHT_DECAY']),
+                                  embeddings_initializer=params['INIT_FUNCTION'],
+                                  trainable=self.src_embedding_weights_trainable,
+                                  weights=self.src_embedding_weights,
+                                  mask_zero=True)(src_text)
+        src_embedding = Regularize(src_embedding, params, name='src_embedding')
 
+        # 2.2. BRNN encoder (GRU/LSTM)
+        if params['BIDIRECTIONAL_ENCODER']:
+            annotations = Bidirectional(eval(params['ENCODER_RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
+                                                                         kernel_regularizer=l2(
+                                                                             params['RECURRENT_WEIGHT_DECAY']),
+                                                                         recurrent_regularizer=l2(
+                                                                             params['RECURRENT_WEIGHT_DECAY']),
+                                                                         bias_regularizer=l2(
+                                                                             params['RECURRENT_WEIGHT_DECAY']),
+                                                                         dropout=params['RECURRENT_INPUT_DROPOUT_P'],
+                                                                         recurrent_dropout=params[
+                                                                             'RECURRENT_DROPOUT_P'],
+                                                                         kernel_initializer=params['INIT_FUNCTION'],
+                                                                         recurrent_initializer=params['INNER_INIT'],
+                                                                         trainable=params.get('TRAINABLE_ENCODER',
+                                                                                              True),
+                                                                         return_sequences=True),
+                                        trainable=params.get('TRAINABLE_ENCODER', True),
+                                        name='bidirectional_encoder_' + params['ENCODER_RNN_TYPE'],
+                                        merge_mode='concat')(src_embedding)
+        else:
+            annotations = eval(params['ENCODER_RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
+                                                           kernel_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                           recurrent_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                           bias_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                                                           dropout=params['RECURRENT_INPUT_DROPOUT_P'],
+                                                           recurrent_dropout=params['RECURRENT_DROPOUT_P'],
+                                                           kernel_initializer=params['INIT_FUNCTION'],
+                                                           recurrent_initializer=params['INNER_INIT'],
+                                                           trainable=params.get('TRAINABLE_ENCODER', True),
+                                                           return_sequences=True,
+                                                           name='encoder_' + params['ENCODER_RNN_TYPE'])(src_embedding)
+        annotations = Regularize(annotations, params, name='annotations')
+        # 2.3. Potentially deep encoder
+        for n_layer in range(1, params['N_LAYERS_ENCODER']):
+            if params['BIDIRECTIONAL_DEEP_ENCODER']:
+                current_annotations = Bidirectional(eval(params['ENCODER_RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
+                                                                                     kernel_regularizer=l2(params[
+                                                                                                               'RECURRENT_WEIGHT_DECAY']),
+                                                                                     recurrent_regularizer=l2(params[
+                                                                                                                  'RECURRENT_WEIGHT_DECAY']),
+                                                                                     bias_regularizer=l2(params[
+                                                                                                             'RECURRENT_WEIGHT_DECAY']),
+                                                                                     dropout=params[
+                                                                                         'RECURRENT_INPUT_DROPOUT_P'],
+                                                                                     recurrent_dropout=params[
+                                                                                         'RECURRENT_DROPOUT_P'],
+                                                                                     kernel_initializer=params[
+                                                                                         'INIT_FUNCTION'],
+                                                                                     recurrent_initializer=params[
+                                                                                         'INNER_INIT'],
+                                                                                     trainable=params.get(
+                                                                                         'TRAINABLE_ENCODER', True),
+                                                                                     return_sequences=True,
+                                                                                     ),
+                                                    merge_mode='concat',
+                                                    trainable=params.get('TRAINABLE_ENCODER', True),
+                                                    name='bidirectional_encoder_' + str(n_layer))(annotations)
+                current_annotations = Regularize(current_annotations, params, name='annotations_' + str(n_layer))
+                annotations = current_annotations if n_layer == 1 and not params['BIDIRECTIONAL_ENCODER'] else Add()(
+                    [annotations, current_annotations])
+            else:
+                current_annotations = eval(params['ENCODER_RNN_TYPE'])(params['ENCODER_HIDDEN_SIZE'],
+                                                                       kernel_regularizer=l2(
+                                                                           params['RECURRENT_WEIGHT_DECAY']),
+                                                                       recurrent_regularizer=l2(
+                                                                           params['RECURRENT_WEIGHT_DECAY']),
+                                                                       bias_regularizer=l2(
+                                                                           params['RECURRENT_WEIGHT_DECAY']),
+                                                                       dropout=params['RECURRENT_INPUT_DROPOUT_P'],
+                                                                       recurrent_dropout=params['RECURRENT_DROPOUT_P'],
+                                                                       kernel_initializer=params['INIT_FUNCTION'],
+                                                                       recurrent_initializer=params['INNER_INIT'],
+                                                                       return_sequences=True,
+                                                                       trainable=params.get('TRAINABLE_ENCODER', True),
+                                                                       name='encoder_' + str(n_layer))(annotations)
+                current_annotations = Regularize(current_annotations, params, name='annotations_' + str(n_layer))
+                annotations = current_annotations if n_layer == 1 and params['BIDIRECTIONAL_ENCODER'] else Add()(
+                    [annotations, current_annotations])
 
+        # 3. Decoder
+        # 3.1.1. Previously generated words as inputs for training -> Teacher forcing
+        # Use characters to see what happens
+        next_words = Input(name=self.ids_inputs[1], batch_shape=tuple([None, None]), dtype='int32')
+        # 3.1.2. Target word embedding
+        state_below = Embedding(params['OUTPUT_VOCABULARY_SIZE'][0], params['TARGET_TEXT_EMBEDDING_SIZE'][0],
+                                name='target_word_embedding',
+                                embeddings_regularizer=l2(params['WEIGHT_DECAY']),
+                                embeddings_initializer=params['INIT_FUNCTION'],
+                                trainable=self.trg_embedding_weights_trainable,
+                                weights=self.trg_embedding_weights,
+                                mask_zero=True)(next_words)
+        # state_below = Lambda(lambda x:x, name= 'VIEW_LAYER', mask=lambda x,m: K.printing(x, "THIS_IS_STATE_BELOW= "))(state_below)
+        state_below = Regularize(state_below, params, name='state_below')
+
+        # 3.2. Decoder's RNN initialization perceptrons with ctx mean
+        ctx_mean = MaskedMean()(annotations)
+        annotations = MaskLayer()(annotations)  # We may want the padded annotations
+
+        if len(params['INIT_LAYERS']) > 0:
+            for n_layer_init in range(len(params['INIT_LAYERS']) - 1):
+                ctx_mean = Dense(params['DECODER_HIDDEN_SIZE'], name='init_layer_%d' % n_layer_init,
+                                 kernel_initializer=params['INIT_FUNCTION'],
+                                 kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                 bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                 trainable=params.get('TRAINABLE_DECODER', True),
+                                 activation=params['INIT_LAYERS'][n_layer_init]
+                                 )(ctx_mean)
+                ctx_mean = Regularize(ctx_mean, params, name='ctx' + str(n_layer_init))
+
+            initial_state = Dense(params['DECODER_HIDDEN_SIZE'], name='initial_state',
+                                  kernel_initializer=params['INIT_FUNCTION'],
+                                  kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                  bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                  trainable=params.get('TRAINABLE_DECODER', True),
+                                  activation=params['INIT_LAYERS'][-1]
+                                  )(ctx_mean)
+            initial_state = Regularize(initial_state, params, name='initial_state')
+            input_attentional_decoder = [state_below, annotations, initial_state]
+
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                initial_memory = Dense(params['DECODER_HIDDEN_SIZE'], name='initial_memory',
+                                       kernel_initializer=params['INIT_FUNCTION'],
+                                       kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                       bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                       trainable=params.get('TRAINABLE_DECODER', True),
+                                       activation=params['INIT_LAYERS'][-1])(ctx_mean)
+                initial_memory = Regularize(initial_memory, params, name='initial_memory')
+                input_attentional_decoder.append(initial_memory)
+        else:
+            # Initialize to zeros vector
+            input_attentional_decoder = [state_below, annotations]
+            initial_state = ZeroesLayer(params['DECODER_HIDDEN_SIZE'])(ctx_mean)
+            input_attentional_decoder.append(initial_state)
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                input_attentional_decoder.append(initial_state)
+
+        # 3.3. Attentional decoder
+        sharedAttRNNCond = eval('Att' + params['DECODER_RNN_TYPE'] + 'Cond')(params['DECODER_HIDDEN_SIZE'],
+                                                                             attention_mode=params.get('ATTENTION_MODE',
+                                                                                                       'add'),
+                                                                             att_units=params.get('ATTENTION_SIZE', 0),
+                                                                             kernel_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             recurrent_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             conditional_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             bias_regularizer=l2(
+                                                                                 params['RECURRENT_WEIGHT_DECAY']),
+                                                                             attention_context_wa_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             attention_recurrent_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             attention_context_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             bias_ba_regularizer=l2(
+                                                                                 params['WEIGHT_DECAY']),
+                                                                             dropout=params[
+                                                                                 'RECURRENT_INPUT_DROPOUT_P'],
+                                                                             recurrent_dropout=params[
+                                                                                 'RECURRENT_DROPOUT_P'],
+                                                                             conditional_dropout=params[
+                                                                                 'RECURRENT_INPUT_DROPOUT_P'],
+                                                                             attention_dropout=params['DROPOUT_P'],
+                                                                             kernel_initializer=params['INIT_FUNCTION'],
+                                                                             recurrent_initializer=params['INNER_INIT'],
+                                                                             attention_context_initializer=params[
+                                                                                 'INIT_ATT'],
+                                                                             trainable=params.get('TRAINABLE_DECODER',
+                                                                                                  True),
+                                                                             return_sequences=True,
+                                                                             return_extra_variables=True,
+                                                                             return_states=True,
+                                                                             num_inputs=len(input_attentional_decoder),
+                                                                             name='decoder_Att' + params[
+                                                                                 'DECODER_RNN_TYPE'] + 'Cond')
+
+        # TODO: Replicate using for bucle for any given number of outputs
+        # 3.3. Attentional decoder. Second decoder
+        sharedAttRNNCond2 = eval('Att' + params['DECODER_RNN_TYPE'] + 'Cond')(params['DECODER_HIDDEN_SIZE'],
+                                                                              attention_mode=params.get(
+                                                                                  'ATTENTION_MODE',
+                                                                                  'add'),
+                                                                              att_units=params.get('ATTENTION_SIZE', 0),
+                                                                              kernel_regularizer=l2(
+                                                                                  params['RECURRENT_WEIGHT_DECAY']),
+                                                                              recurrent_regularizer=l2(
+                                                                                  params['RECURRENT_WEIGHT_DECAY']),
+                                                                              conditional_regularizer=l2(
+                                                                                  params['RECURRENT_WEIGHT_DECAY']),
+                                                                              bias_regularizer=l2(
+                                                                                  params['RECURRENT_WEIGHT_DECAY']),
+                                                                              attention_context_wa_regularizer=l2(
+                                                                                  params['WEIGHT_DECAY']),
+                                                                              attention_recurrent_regularizer=l2(
+                                                                                  params['WEIGHT_DECAY']),
+                                                                              attention_context_regularizer=l2(
+                                                                                  params['WEIGHT_DECAY']),
+                                                                              bias_ba_regularizer=l2(
+                                                                                  params['WEIGHT_DECAY']),
+                                                                              dropout=params[
+                                                                                  'RECURRENT_INPUT_DROPOUT_P'],
+                                                                              recurrent_dropout=params[
+                                                                                  'RECURRENT_DROPOUT_P'],
+                                                                              conditional_dropout=params[
+                                                                                  'RECURRENT_INPUT_DROPOUT_P'],
+                                                                              attention_dropout=params['DROPOUT_P'],
+                                                                              kernel_initializer=params[
+                                                                                  'INIT_FUNCTION'],
+                                                                              recurrent_initializer=params[
+                                                                                  'INNER_INIT'],
+                                                                              attention_context_initializer=params[
+                                                                                  'INIT_ATT'],
+                                                                              trainable=params.get('TRAINABLE_DECODER',
+                                                                                                   True),
+                                                                              return_sequences=True,
+                                                                              return_extra_variables=True,
+                                                                              return_states=True,
+                                                                              num_inputs=len(input_attentional_decoder),
+                                                                              name='decoder_Att2' + params[
+                                                                                  'DECODER_RNN_TYPE'] + 'Cond')
+
+        rnn_output = sharedAttRNNCond(input_attentional_decoder)
+        proj_h = rnn_output[0]
+        x_att = rnn_output[1]
+        alphas = rnn_output[2]
+        h_state = rnn_output[3]
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            h_memory = rnn_output[4]
+        shared_Lambda_Permute = PermuteGeneral((1, 0, 2))
+
+        rnn_output2 = sharedAttRNNCond2(input_attentional_decoder)
+        proj_h2 = rnn_output2[0]
+        x_att2 = rnn_output2[1]
+        alphas2 = rnn_output2[2]
+        h_state2 = rnn_output2[3]
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            h_memory2 = rnn_output2[4]
+
+        if params['DOUBLE_STOCHASTIC_ATTENTION_REG'] > 0:
+            alpha_regularizer = AlphaRegularizer(alpha_factor=params['DOUBLE_STOCHASTIC_ATTENTION_REG'])(alphas)
+            alpha_regularizer2 = AlphaRegularizer(alpha_factor=params['DOUBLE_STOCHASTIC_ATTENTION_REG'])(alphas2)
+
+        [proj_h, shared_reg_proj_h] = Regularize(proj_h, params, shared_layers=True, name='proj_h0')
+        [proj_h2, shared_reg_proj_h2] = Regularize(proj_h2, params, shared_layers=True, name='proj_h02')
+
+        # 3.4. Possibly deep decoder
+        # TODO: Replicate code for second decoder
+        shared_proj_h_list = []
+        shared_reg_proj_h_list = []
+
+        h_states_list = [h_state]
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            h_memories_list = [h_memory]
+
+        for n_layer in range(1, params['N_LAYERS_DECODER']):
+            current_rnn_input = [proj_h, shared_Lambda_Permute(x_att), initial_state]
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                current_rnn_input.append(initial_memory)
+            shared_proj_h_list.append(eval(params['DECODER_RNN_TYPE'].replace('Conditional', '') + 'Cond')(
+                params['DECODER_HIDDEN_SIZE'],
+                kernel_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                recurrent_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                conditional_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                bias_regularizer=l2(params['RECURRENT_WEIGHT_DECAY']),
+                dropout=params['RECURRENT_DROPOUT_P'],
+                recurrent_dropout=params['RECURRENT_INPUT_DROPOUT_P'],
+                conditional_dropout=params['RECURRENT_INPUT_DROPOUT_P'],
+                kernel_initializer=params['INIT_FUNCTION'],
+                recurrent_initializer=params['INNER_INIT'],
+                return_sequences=True,
+                return_states=True,
+                trainable=params.get('TRAINABLE_DECODER', True),
+                num_inputs=len(current_rnn_input),
+                name='decoder_' + params['DECODER_RNN_TYPE'].replace('Conditional', '') + 'Cond' + str(n_layer)))
+
+            current_rnn_output = shared_proj_h_list[-1](current_rnn_input)
+            current_proj_h = current_rnn_output[0]
+            h_states_list.append(current_rnn_output[1])
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                h_memories_list.append(current_rnn_output[2])
+            [current_proj_h, shared_reg_proj_h] = Regularize(current_proj_h, params, shared_layers=True,
+                                                             name='proj_h' + str(n_layer))
+            shared_reg_proj_h_list.append(shared_reg_proj_h)
+
+            proj_h = Add()([proj_h, current_proj_h])
+
+        # 3.5. Skip connections between encoder and output layer
+        shared_FC_mlp = TimeDistributed(Dense(params['SKIP_VECTORS_HIDDEN_SIZE'],
+                                              kernel_initializer=params['INIT_FUNCTION'],
+                                              kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                              bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                              trainable=params.get('TRAINABLE_DECODER', True),
+                                              activation='linear'),
+                                        trainable=params.get('TRAINABLE_DECODER', True),
+                                        name='logit_lstm')
+        out_layer_mlp = shared_FC_mlp(proj_h)
+        out_layer_mlp2 = shared_FC_mlp(proj_h2)
+
+        shared_FC_ctx = TimeDistributed(Dense(params['SKIP_VECTORS_HIDDEN_SIZE'],
+                                              kernel_initializer=params['INIT_FUNCTION'],
+                                              kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                              bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                              trainable=params.get('TRAINABLE_DECODER', True),
+                                              activation='linear'),
+                                        trainable=params.get('TRAINABLE_DECODER', True),
+                                        name='logit_ctx')
+        out_layer_ctx = shared_FC_ctx(x_att)
+        out_layer_ctx = shared_Lambda_Permute(out_layer_ctx)
+        out_layer_ctx2 = shared_FC_ctx(x_att2)
+        out_layer_ctx2 = shared_Lambda_Permute(out_layer_ctx2)
+        shared_FC_emb = TimeDistributed(Dense(params['SKIP_VECTORS_HIDDEN_SIZE'],
+                                              kernel_initializer=params['INIT_FUNCTION'],
+                                              kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                              bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                              trainable=params.get('TRAINABLE_DECODER', True),
+                                              activation='linear'),
+                                        trainable=params.get('TRAINABLE_DECODER', True),
+                                        name='logit_emb')
+        out_layer_emb = shared_FC_emb(state_below)
+
+        [out_layer_mlp, shared_reg_out_layer_mlp] = Regularize(out_layer_mlp, params,
+                                                               shared_layers=True, name='out_layer_mlp')
+        [out_layer_ctx, shared_reg_out_layer_ctx] = Regularize(out_layer_ctx, params,
+                                                               shared_layers=True, name='out_layer_ctx')
+        [out_layer_emb, shared_reg_out_layer_emb] = Regularize(out_layer_emb, params,
+                                                               shared_layers=True, name='out_layer_emb')
+
+        [out_layer_mlp2, shared_reg_out_layer_mlp2] = Regularize(out_layer_mlp2, params,
+                                                                 shared_layers=True, name='out_layer_mlp2')
+        [out_layer_ctx2, shared_reg_out_layer_ctx2] = Regularize(out_layer_ctx2, params,
+                                                                 shared_layers=True, name='out_layer_ctx2')
+
+        shared_additional_output_merge = eval(params['ADDITIONAL_OUTPUT_MERGE_MODE'])(name='additional_input')
+        additional_output = shared_additional_output_merge([out_layer_mlp, out_layer_ctx, out_layer_emb])
+        additional_output2 = shared_additional_output_merge([out_layer_mlp2, out_layer_ctx2, out_layer_emb])
+        shared_activation = Activation(params.get('SKIP_VECTORS_SHARED_ACTIVATION', 'tanh'))
+
+        out_layer = shared_activation(additional_output)
+
+        out_layer2 = shared_activation(additional_output2)
+
+        shared_deep_list = []
+        shared_reg_deep_list = []
+        # 3.6 Optional deep ouput layer
+        for i, (activation, dimension) in enumerate(params['DEEP_OUTPUT_LAYERS']):
+            shared_deep_list.append(TimeDistributed(Dense(dimension, activation=activation,
+                                                          kernel_initializer=params['INIT_FUNCTION'],
+                                                          kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                                          bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                                          trainable=params.get('TRAINABLE_DECODER', True),
+                                                          ),
+                                                    trainable=params.get('TRAINABLE_DECODER', True),
+                                                    name=activation + '_%d' % i))
+            out_layer = shared_deep_list[-1](out_layer)
+            out_layer2 = shared_deep_list[-1](out_layer2)
+            [out_layer, shared_reg_out_layer] = Regularize(out_layer,
+                                                           params, shared_layers=True,
+                                                           name='out_layer_' + str(activation) + '_%d' % i)
+            shared_reg_deep_list.append(shared_reg_out_layer)
+
+            [out_layer2, shared_reg_out_layer2] = Regularize(out_layer2,
+                                                             params, shared_layers=True,
+                                                             name='out_layer2_' + str(activation) + '_%d' % i)
+            shared_reg_deep_list.append(shared_reg_out_layer2)
+
+        # 3.7.1 Output layer: Softmax
+        shared_FC_soft = TimeDistributed(Dense(params['OUTPUT_VOCABULARY_SIZE'][0],
+                                               activation=params['CLASSIFIER_ACTIVATION'],
+                                               kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                               bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                               trainable=params.get('TRAINABLE_DECODER', True),
+                                               name=params['CLASSIFIER_ACTIVATION']
+                                               ),
+                                         trainable=params.get('TRAINABLE_DECODER', True),
+                                         name=self.ids_outputs[0])
+        softout = shared_FC_soft(out_layer)
+
+        # 3.7.2 Output layer 2: Softmax
+
+        shared_FC_soft2 = TimeDistributed(Dense(params['OUTPUT_VOCABULARY_SIZE'][1],
+                                                activation=params['CLASSIFIER_ACTIVATION'],
+                                                kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                                bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                                trainable=params.get('TRAINABLE_DECODER', True),
+                                                name=params['CLASSIFIER_ACTIVATION'] + '2'
+                                                ),
+                                          trainable=params.get('TRAINABLE_DECODER', True),
+                                          name=self.ids_outputs[1])
+        softout2 = shared_FC_soft2(out_layer2)
+
+        self.model = Model(inputs=[src_text, next_words], outputs=[softout, softout2])
+
+        if params['DOUBLE_STOCHASTIC_ATTENTION_REG'] > 0.:
+            self.model.add_loss(alpha_regularizer)
+        ##################################################################
+        #                         SAMPLING MODEL                         #
+        ##################################################################
+        # Now that we have the basic training model ready, let's prepare the model for applying decoding
+        # The beam-search model will include all the minimum required set of layers (decoder stage) which offer the
+        # possibility to generate the next state in the sequence given a pre-processed input (encoder stage)
+        # First, we need a model that outputs the preprocessed input + initial h state
+        # for applying the initial forward pass
+        model_init_input = [src_text, next_words]
+        model_init_output = [softout, softout2, annotations] + h_states_list
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            model_init_output += h_memories_list
+        if self.return_alphas:
+            model_init_output.append(alphas)
+        self.model_init = Model(inputs=model_init_input, outputs=model_init_output)
+
+        # Store inputs and outputs names for model_init
+        self.ids_inputs_init = self.ids_inputs
+        ids_states_names = ['next_state_' + str(i) for i in range(len(h_states_list))]
+
+        # first output must be the output probs.
+        self.ids_outputs_init = self.ids_outputs + ['preprocessed_input'] + ids_states_names
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            ids_memories_names = ['next_memory_' + str(i) for i in range(len(h_memories_list))]
+            self.ids_outputs_init += ids_memories_names
+        # Second, we need to build an additional model with the capability to have the following inputs:
+        #   - preprocessed_input
+        #   - prev_word
+        #   - prev_state
+        # and the following outputs:
+        #   - softmax probabilities
+        #   - next_state
+        preprocessed_size = params['ENCODER_HIDDEN_SIZE'] * 2 if \
+            (params['BIDIRECTIONAL_ENCODER'] and params['N_LAYERS_ENCODER'] == 1) or (
+                    params['BIDIRECTIONAL_DEEP_ENCODER'] and params['N_LAYERS_ENCODER'] > 1) \
+            else params['ENCODER_HIDDEN_SIZE']
+        # Define inputs
+        n_deep_decoder_layer_idx = 0
+        preprocessed_annotations = Input(name='preprocessed_input', shape=tuple([None, preprocessed_size]))
+        prev_h_states_list = [Input(name='prev_state_' + str(i),
+                                    shape=tuple([params['DECODER_HIDDEN_SIZE']]))
+                              for i in range(len(h_states_list))]
+
+        input_attentional_decoder = [state_below, preprocessed_annotations,
+                                     prev_h_states_list[n_deep_decoder_layer_idx]]
+
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            prev_h_memories_list = [Input(name='prev_memory_' + str(i),
+                                          shape=tuple([params['DECODER_HIDDEN_SIZE']]))
+                                    for i in range(len(h_memories_list))]
+
+            input_attentional_decoder.append(prev_h_memories_list[n_deep_decoder_layer_idx])
+        # Apply decoder
+        rnn_output = sharedAttRNNCond(input_attentional_decoder)
+        proj_h = rnn_output[0]
+        x_att = rnn_output[1]
+        alphas = rnn_output[2]
+        h_states_list = [rnn_output[3]]
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            h_memories_list = [rnn_output[4]]
+        for reg in shared_reg_proj_h:
+            proj_h = reg(proj_h)
+
+        for (rnn_decoder_layer, proj_h_reg) in zip(shared_proj_h_list, shared_reg_proj_h_list):
+            n_deep_decoder_layer_idx += 1
+            input_rnn_decoder_layer = [proj_h, shared_Lambda_Permute(x_att),
+                                       prev_h_states_list[n_deep_decoder_layer_idx]]
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                input_rnn_decoder_layer.append(prev_h_memories_list[n_deep_decoder_layer_idx])
+
+            current_rnn_output = rnn_decoder_layer(input_rnn_decoder_layer)
+            current_proj_h = current_rnn_output[0]
+            h_states_list.append(current_rnn_output[1])  # h_state
+            if 'LSTM' in params['DECODER_RNN_TYPE']:
+                h_memories_list.append(current_rnn_output[2])  # h_memory
+            for reg in proj_h_reg:
+                current_proj_h = reg(current_proj_h)
+            proj_h = Add()([proj_h, current_proj_h])
+        out_layer_mlp = shared_FC_mlp(proj_h)
+        out_layer_ctx = shared_FC_ctx(x_att)
+        out_layer_ctx = shared_Lambda_Permute(out_layer_ctx)
+        out_layer_emb = shared_FC_emb(state_below)
+
+        for (reg_out_layer_mlp, reg_out_layer_ctx, reg_out_layer_emb) in zip(shared_reg_out_layer_mlp,
+                                                                             shared_reg_out_layer_ctx,
+                                                                             shared_reg_out_layer_emb):
+            out_layer_mlp = reg_out_layer_mlp(out_layer_mlp)
+            out_layer_ctx = reg_out_layer_ctx(out_layer_ctx)
+            out_layer_emb = reg_out_layer_emb(out_layer_emb)
+
+        additional_output = shared_additional_output_merge([out_layer_mlp, out_layer_ctx, out_layer_emb])
+        out_layer = shared_activation(additional_output)
+
+        for (deep_out_layer, reg_list) in zip(shared_deep_list, shared_reg_deep_list):
+            out_layer = deep_out_layer(out_layer)
+            for reg in reg_list:
+                out_layer = reg(out_layer)
+
+        # Softmax
+        softout = shared_FC_soft(out_layer)
+        softout2 = shared_FC_soft2(out_layer)  # Second Softmax - Character level
+        model_next_inputs = [next_words, preprocessed_annotations] + prev_h_states_list
+        model_next_outputs = [softout, softout2, preprocessed_annotations] + h_states_list
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            model_next_inputs += prev_h_memories_list
+            model_next_outputs += h_memories_list
+
+        if self.return_alphas:
+            model_next_outputs.append(alphas)
+
+        self.model_next = Model(inputs=model_next_inputs,
+                                outputs=model_next_outputs)
+        # Store inputs and outputs names for model_next
+        # first input must be previous word
+        self.ids_inputs_next = [self.ids_inputs[1]] + ['preprocessed_input']
+        # first output must be the output probs.
+        self.ids_outputs_next = self.ids_outputs + ['preprocessed_input']
+        # Input -> Output matchings from model_init to model_next and from model_next to model_next
+        self.matchings_init_to_next = {'preprocessed_input': 'preprocessed_input'}
+        self.matchings_next_to_next = {'preprocessed_input': 'preprocessed_input'}
+        # append all next states and matchings
+
+        for n_state in range(len(prev_h_states_list)):
+            self.ids_inputs_next.append('prev_state_' + str(n_state))
+            self.ids_outputs_next.append('next_state_' + str(n_state))
+            self.matchings_init_to_next['next_state_' + str(n_state)] = 'prev_state_' + str(n_state)
+            self.matchings_next_to_next['next_state_' + str(n_state)] = 'prev_state_' + str(n_state)
+
+        if 'LSTM' in params['DECODER_RNN_TYPE']:
+            for n_memory in range(len(prev_h_memories_list)):
+                self.ids_inputs_next.append('prev_memory_' + str(n_memory))
+                self.ids_outputs_next.append('next_memory_' + str(n_memory))
+                self.matchings_init_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
+                self.matchings_next_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)

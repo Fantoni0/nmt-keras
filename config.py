@@ -5,6 +5,8 @@ def load_parameters():
     :return parameters: Dictionary of loaded parameters
     """
 
+    LOSS_WEIGHTS = [1.0, 0.0]
+
     # Input data params
     TASK_NAME = 'EuTrans'                           # Task name
     DATASET_NAME = TASK_NAME                        # Dataset name
@@ -20,10 +22,15 @@ def load_parameters():
                   'test': 'test.'}
 
     # Dataset class parameters
-    INPUTS_IDS_DATASET = ['source_text', 'state_below']     # Corresponding inputs of the dataset
-    OUTPUTS_IDS_DATASET = ['target_char', 'target_text']    # Corresponding outputs of the dataset
-    INPUTS_IDS_MODEL = ['source_text', 'state_below']       # Corresponding inputs of the built model
-    OUTPUTS_IDS_MODEL = ['target_char', 'target_text']      # Corresponding outputs of the built model
+    INPUTS_IDS_DATASET = ['source_text', 'state_below']  # Corresponding inputs of the dataset
+    INPUTS_IDS_MODEL = ['source_text', 'state_below']  # Corresponding inputs of the built model
+
+    if LOSS_WEIGHTS[1] == 0:
+        OUTPUTS_IDS_DATASET = ['target_char']  # Corresponding outputs of the dataset
+        OUTPUTS_IDS_MODEL =   ['target_char']  # Corresponding outputs of the built model
+    else:
+        OUTPUTS_IDS_DATASET = ['target_char', 'target_text']  # Corresponding outputs of the dataset
+        OUTPUTS_IDS_MODEL =   ['target_char', 'target_text']      # Corresponding outputs of the built model
 
     # State below index. In which index (from INPUTS_IDS_DATASET) can we find state_below?
     BEAM_SEARCH_COND_INPUT = 1
@@ -35,7 +42,7 @@ def load_parameters():
     METRICS = ['coco']                            # Metric used for evaluating the model
     EVAL_ON_SETS = ['val']                        # Possible values: 'train', 'val' and 'test' (external evaluator)
     EVAL_ON_SETS_KERAS = []                       # Possible values: 'train', 'val' and 'test' (Keras' evaluator). Untested.
-    START_EVAL_ON_EPOCH = 1                       # First epoch to start the model evaluation
+    START_EVAL_ON_EPOCH = 0                       # First epoch to start the model evaluation
     EVAL_EACH_EPOCHS = True                       # Select whether evaluate between N epochs or N updates
     EVAL_EACH = 1                                 # Sets the evaluation frequency (epochs or updates)
 
@@ -132,17 +139,18 @@ def load_parameters():
 
     # Optimizer parameters (see model.compile() function)
     LOSS = 'sparse_categorical_crossentropy'
+
     CLASSIFIER_ACTIVATION = 'softmax'
     SAMPLE_WEIGHTS = True                         # Select whether we use a weights matrix (mask) for the data outputs
 
     OPTIMIZER = 'Adam'                            # Optimizer
-    LR = 0.0002                                   # Learning rate. Recommended values - Adam 0.001 - Adadelta 1.0
+    LR = 0.001                                   # Learning rate. Recommended values - Adam 0.001 - Adadelta 1.0
     CLIP_C = 1.                                   # During training, clip L2 norm of gradients to this value (0. means deactivated)
     CLIP_V = 0.                                   # During training, clip absolute value of gradients to this value (0. means deactivated)
 
     # Advanced parameters for optimizers. Default values are usually effective
     MOMENTUM = 0.                                 # Momentum value (for SGD optimizer)
-    NESTEROV_MOMENTUM = False                     # Use Nesterov momentum (for SGD optimizer)
+    NESTEROV_MOMENTUM = False                      # Use Nesterov momentum (for SGD optimizer)
     RHO = 0.9                                     # Rho value (for Adadelta and RMSprop optimizers)
     BETA_1 = 0.9                                  # Beta 1 value (for Adam, Adamax Nadam optimizers)
     BETA_2 = 0.999                                # Beta 2 value (for Adam, Adamax Nadam optimizers)
@@ -169,7 +177,7 @@ def load_parameters():
 
     # Early stop parameters
     EARLY_STOP = True                             # Turns on/off the early stop protocol
-    PATIENCE = 20                                 # We'll stop if the val STOP_METRIC does not improve after this
+    PATIENCE = 10                                 # We'll stop if the val STOP_METRIC does not improve after this
                                                   # number of evaluations
     STOP_METRIC = 'Bleu_4'                        # Metric for the stop
 
@@ -188,26 +196,26 @@ def load_parameters():
     INNER_INIT = 'orthogonal'                     # Initialization function for inner RNN matrices.
     INIT_ATT = 'glorot_uniform'                   # Initialization function for attention mechism matrices
 
-    SOURCE_TEXT_EMBEDDING_SIZE = 128              # Source language word embedding size.
+    SOURCE_TEXT_EMBEDDING_SIZE = 64              # Source language word embedding size.
     SRC_PRETRAINED_VECTORS = None                 # Path to pretrained vectors (e.g.: DATA_ROOT_PATH + '/DATA/word2vec.%s.npy' % SRC_LAN)
                                                   # Set to None if you don't want to use pretrained vectors.
                                                   # When using pretrained word embeddings. this parameter must match with the word embeddings size
     SRC_PRETRAINED_VECTORS_TRAINABLE = True       # Finetune or not the target word embedding vectors.
 
-    TARGET_TEXT_EMBEDDING_SIZE = [50, 128]        # Source language word embedding size.
+    TARGET_TEXT_EMBEDDING_SIZE = [64, 64]        # Source language word embedding size.
     TRG_PRETRAINED_VECTORS = None                 # Path to pretrained vectors. (e.g. DATA_ROOT_PATH + '/DATA/word2vec.%s.npy' % TRG_LAN)
                                                   # Set to None if you don't want to use pretrained vectors.
                                                   # When using pretrained word embeddings, the size of the pretrained word embeddings must match with the word embeddings size.
     TRG_PRETRAINED_VECTORS_TRAINABLE = True       # Finetune or not the target word embedding vectors.
 
     # Encoder configuration
-    ENCODER_HIDDEN_SIZE = 128                      # For models with RNN encoder
+    ENCODER_HIDDEN_SIZE = 64                      # For models with RNN encoder
     BIDIRECTIONAL_ENCODER = True                  # Use bidirectional encoder
     N_LAYERS_ENCODER = 1                          # Stack this number of encoding layers
     BIDIRECTIONAL_DEEP_ENCODER = True             # Use bidirectional encoder in all encoding layers
 
     # Decoder configuration
-    DECODER_HIDDEN_SIZE = 128                      # For models with RNN decoder
+    DECODER_HIDDEN_SIZE = 64                      # For models with RNN decoder
     N_LAYERS_DECODER = 1                          # Stack this number of decoding layers.
     ADDITIONAL_OUTPUT_MERGE_MODE = 'Add'          # Merge mode for the skip-connections (see keras.layers.merge.py)
     ATTENTION_SIZE = DECODER_HIDDEN_SIZE
@@ -228,7 +236,7 @@ def load_parameters():
     DEEP_OUTPUT_LAYERS = [('linear', TARGET_TEXT_EMBEDDING_SIZE[0])]
 
     # Regularizers
-    WEIGHT_DECAY = 1e-4                           # L2 regularization
+    WEIGHT_DECAY = 0                           # L2 regularization
     RECURRENT_WEIGHT_DECAY = 0.                   # L2 regularization in recurrent layers
 
     DROPOUT_P = 0.                                # Percentage of units to drop (0 means no dropout)
@@ -268,14 +276,14 @@ def load_parameters():
     EMBEDDINGS_FREQ = 1                      # Frequency (in epochs) at which selected embedding layers will be saved.
     EMBEDDINGS_LAYER_NAMES = [               # A list of names of layers to keep eye on. If None or empty list all the embedding layer will be watched.
         'source_word_embedding',
-        'target_word_embedding',
-        'target_char_embedding']
+        'target_char_embedding',
+        'target_word_embedding']
     EMBEDDINGS_METADATA = None               # Dictionary which maps layer name to a file name in which metadata for this embedding layer is saved.
     LABEL_WORD_EMBEDDINGS_WITH_VOCAB = True  # Whether to use vocabularies as word embeddings labels (will overwrite EMBEDDINGS_METADATA)
     WORD_EMBEDDINGS_LABELS = [               # Vocabularies for labeling. Must match EMBEDDINGS_LAYER_NAMES
         'source_text',
-        'target_text',
-        'target_char']
+        'target_char',
+        'target_text']
 
     SAMPLING_SAVE_MODE = 'list'                        # 'list': Store in a text file, one sentence per line.
     VERBOSE = 1                                        # Verbosity level

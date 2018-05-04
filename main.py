@@ -72,10 +72,13 @@ def train_model(params, load_dataset=None):
             dataset = loadDataset(load_dataset)
 
     params['INPUT_VOCABULARY_SIZE'] = dataset.vocabulary_len[params['INPUTS_IDS_DATASET'][0]]
-    params['OUTPUT_VOCABULARY_SIZE'] = [dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]], \
+    # Cutre solucion - Borrar tan pronto ocmo temrinar de hacer las pruebas.
+    if params['LOSS_WEIGHTS'][1] != 0:
+        params['OUTPUT_VOCABULARY_SIZE'] = [dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]], \
                                         dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][1]] ]
-
-    # Build model
+    else:
+        params['OUTPUT_VOCABULARY_SIZE'] = [dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]]]
+                                            # Build model
     set_optimizer = True if params['RELOAD'] == 0 else False
     clear_dirs = True if params['RELOAD'] == 0 else False
 
@@ -107,7 +110,7 @@ def train_model(params, load_dataset=None):
     if params['RELOAD'] > 0:
         nmt_model = updateModel(nmt_model, params['STORE_PATH'], params['RELOAD'], reload_epoch=params['RELOAD_EPOCH'])
         nmt_model.setParams(params)
-        nmt_model.setOptimizer(loss_weights={'target_text':1., 'target_text':0.3 })
+        nmt_model.setOptimizer()
         if params.get('EPOCH_OFFSET') is None:
             params['EPOCH_OFFSET'] = params['RELOAD'] if params['RELOAD_EPOCH'] else \
                 int(params['RELOAD'] * params['BATCH_SIZE'] / dataset.len_train)
@@ -263,32 +266,32 @@ def apply_NMT_model(params, load_dataset=None):
 
         callback_metric.evaluate(params['RELOAD'], counter_name='epoch' if params['EVAL_EACH_EPOCHS'] else 'update')
 
-        # Suplicate evaluation for character softmax
-        callback_metric = PrintPerformanceMetricOnEpochEndOrEachNUpdates(nmt_model,
-                                                                         dataset,
-                                                                         gt_id=params['OUTPUTS_IDS_DATASET'][1],
-                                                                         metric_name=params['METRICS'],
-                                                                         set_name=params['EVAL_ON_SETS'],
-                                                                         batch_size=params['BATCH_SIZE'],
-                                                                         each_n_epochs=params['EVAL_EACH'],
-                                                                         extra_vars=extra_vars,
-                                                                         reload_epoch=params['RELOAD'],
-                                                                         is_text=True,
-                                                                         input_text_id=input_text_id,
-                                                                         save_path=nmt_model.model_path,
-                                                                         index2word_y=vocab_y_2, # Chars
-                                                                         index2word_x=vocab_x,
-                                                                         sampling_type=params['SAMPLING'],
-                                                                         beam_search=params['BEAM_SEARCH'],
-                                                                         start_eval_on_epoch=params[
-                                                                             'START_EVAL_ON_EPOCH'],
-                                                                         write_samples=True,
-                                                                         write_type=params['SAMPLING_SAVE_MODE'],
-                                                                         eval_on_epochs=params['EVAL_EACH_EPOCHS'],
-                                                                         save_each_evaluation=False,
-                                                                         verbose=params['VERBOSE'])
-
-        callback_metric.evaluate(params['RELOAD'], counter_name='epoch' if params['EVAL_EACH_EPOCHS'] else 'update')
+        # # Suplicate evaluation for character softmax
+        # callback_metric = PrintPerformanceMetricOnEpochEndOrEachNUpdates(nmt_model,
+        #                                                                  dataset,
+        #                                                                  gt_id=params['OUTPUTS_IDS_DATASET'][1],
+        #                                                                  metric_name=params['METRICS'],
+        #                                                                  set_name=params['EVAL_ON_SETS'],
+        #                                                                  batch_size=params['BATCH_SIZE'],
+        #                                                                  each_n_epochs=params['EVAL_EACH'],
+        #                                                                  extra_vars=extra_vars,
+        #                                                                  reload_epoch=params['RELOAD'],
+        #                                                                  is_text=True,
+        #                                                                  input_text_id=input_text_id,
+        #                                                                  save_path=nmt_model.model_path,
+        #                                                                  index2word_y=vocab_y_2, # Chars
+        #                                                                  index2word_x=vocab_x,
+        #                                                                  sampling_type=params['SAMPLING'],
+        #                                                                  beam_search=params['BEAM_SEARCH'],
+        #                                                                  start_eval_on_epoch=params[
+        #                                                                      'START_EVAL_ON_EPOCH'],
+        #                                                                  write_samples=True,
+        #                                                                  write_type=params['SAMPLING_SAVE_MODE'],
+        #                                                                  eval_on_epochs=params['EVAL_EACH_EPOCHS'],
+        #                                                                  save_each_evaluation=False,
+        #                                                                  verbose=params['VERBOSE'])
+        #
+        # callback_metric.evaluate(params['RELOAD'], counter_name='epoch' if params['EVAL_EACH_EPOCHS'] else 'update')
 
 
 def buildCallbacks(params, model, dataset):
