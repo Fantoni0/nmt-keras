@@ -73,12 +73,12 @@ def train_model(params, load_dataset=None):
 
     params['INPUT_VOCABULARY_SIZE'] = dataset.vocabulary_len[params['INPUTS_IDS_DATASET'][0]]
     # Cutre solucion - Borrar tan pronto ocmo temrinar de hacer las pruebas.
-    if params['LOSS_WEIGHTS'][1] != 0:
-        params['OUTPUT_VOCABULARY_SIZE'] = [dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]], \
+    #if params['LOSS_WEIGHTS'][1] != 0:
+    params['OUTPUT_VOCABULARY_SIZE'] = [dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]], \
                                         dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][1]] ]
-    else:
-        params['OUTPUT_VOCABULARY_SIZE'] = [dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]]]
-                                            # Build model
+    # else:
+    #     params['OUTPUT_VOCABULARY_SIZE'] = [dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]]]
+    #                                         # Build model
     set_optimizer = True if params['RELOAD'] == 0 else False
     clear_dirs = True if params['RELOAD'] == 0 else False
 

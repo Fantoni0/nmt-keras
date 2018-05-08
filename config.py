@@ -25,12 +25,12 @@ def load_parameters():
     INPUTS_IDS_DATASET = ['source_text', 'state_below']  # Corresponding inputs of the dataset
     INPUTS_IDS_MODEL = ['source_text', 'state_below']  # Corresponding inputs of the built model
 
-    if LOSS_WEIGHTS[1] == 0:
-        OUTPUTS_IDS_DATASET = ['target_char']  # Corresponding outputs of the dataset
-        OUTPUTS_IDS_MODEL =   ['target_char']  # Corresponding outputs of the built model
-    else:
-        OUTPUTS_IDS_DATASET = ['target_char', 'target_text']  # Corresponding outputs of the dataset
-        OUTPUTS_IDS_MODEL =   ['target_char', 'target_text']      # Corresponding outputs of the built model
+    # if LOSS_WEIGHTS[1] == 0:
+    #     OUTPUTS_IDS_DATASET = ['target_char']  # Corresponding outputs of the dataset
+    #     OUTPUTS_IDS_MODEL =   ['target_char']  # Corresponding outputs of the built model
+    # else:
+    OUTPUTS_IDS_DATASET = ['target_char', 'target_text']  # Corresponding outputs of the dataset
+    OUTPUTS_IDS_MODEL =   ['target_char', 'target_text']      # Corresponding outputs of the built model
 
     # State below index. In which index (from INPUTS_IDS_DATASET) can we find state_below?
     BEAM_SEARCH_COND_INPUT = 1

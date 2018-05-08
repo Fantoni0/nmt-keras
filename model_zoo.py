@@ -205,8 +205,8 @@ class TranslationModel(Model_Wrapper):
             logging.info('\tWARNING: The modification of the LR is not implemented for the chosen optimizer.')
             optimizer = eval(self.params['OPTIMIZER'])
 
-        if self.params['LOSS_WEIGHTS'][1] == 0:
-            self.params['LOSS_WEIGHTS'] = self.params['LOSS_WEIGHTS'][:-1]
+        # if self.params['LOSS_WEIGHTS'][1] == 0:
+        #     self.params['LOSS_WEIGHTS'] = self.params['LOSS_WEIGHTS'][:-1]
 
         self.model.compile(optimizer=optimizer,
                            loss=self.params['LOSS'],
@@ -2038,12 +2038,12 @@ class TranslationModel(Model_Wrapper):
 
         # 3.7.2 Output layer 2: Softmax
 
-        if params['LOSS_WEIGHTS'][1] == 0:
-            name_soft_layer = self.ids_outputs[0] + '2'
-        else:
-            name_soft_layer = self.ids_outputs[1]
+        # if params['LOSS_WEIGHTS'][1] == 0:
+        #     name_soft_layer = self.ids_outputs[0] + '2'
+        # else:
+        name_soft_layer = self.ids_outputs[1]
 
-        out_soft_size = params['OUTPUT_VOCABULARY_SIZE'][1] if params['LOSS_WEIGHTS'][1] != 0 else 689
+        out_soft_size = params['OUTPUT_VOCABULARY_SIZE'][1] #if params['LOSS_WEIGHTS'][1] != 0 else 689
         shared_FC_soft2 = TimeDistributed(Dense(out_soft_size,
                                                 activation=params['CLASSIFIER_ACTIVATION'],
                                                 kernel_regularizer=l2(params['WEIGHT_DECAY']),
@@ -2055,10 +2055,10 @@ class TranslationModel(Model_Wrapper):
                                           name=name_soft_layer)
         softout2 = shared_FC_soft2(out_layer)
 
-        if params['LOSS_WEIGHTS'][1] == 0:
-            model_output = [softout]
-        else:
-            model_output = [softout, softout2]
+        # if params['LOSS_WEIGHTS'][1] == 0:
+        #     model_output = [softout]
+        # else:
+        model_output = [softout, softout2]
 
         self.model = Model(inputs=[src_text, next_words], outputs=model_output)
 
@@ -2074,10 +2074,10 @@ class TranslationModel(Model_Wrapper):
         # for applying the initial forward pass
         model_init_input = [src_text, next_words]
 
-        if params['LOSS_WEIGHTS'][1] == 0:
-            model_output = [softout]
-        else:
-            model_output = [softout, softout2]
+        # if params['LOSS_WEIGHTS'][1] == 0:
+        #     model_output = [softout]
+        # else:
+        model_output = [softout, softout2]
 
         model_init_output = model_output + [annotations] + h_states_list
         if 'LSTM' in params['DECODER_RNN_TYPE']:
@@ -2174,10 +2174,10 @@ class TranslationModel(Model_Wrapper):
 
         model_next_inputs = [next_words, preprocessed_annotations] + prev_h_states_list
 
-        if params['LOSS_WEIGHTS'][1] == 0:
-            model_next_outputs = [softout, preprocessed_annotations] + h_states_list
-        else:
-            model_next_outputs = [softout, softout2, preprocessed_annotations] + h_states_list
+        # if params['LOSS_WEIGHTS'][1] == 0:
+        #     model_next_outputs = [softout, preprocessed_annotations] + h_states_list
+        # else:
+        model_next_outputs = [softout, softout2, preprocessed_annotations] + h_states_list
 
         if 'LSTM' in params['DECODER_RNN_TYPE']:
             model_next_inputs += prev_h_memories_list
