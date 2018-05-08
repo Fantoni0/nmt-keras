@@ -106,7 +106,7 @@ if __name__ == "__main__":
         if args.n_best:
             predictions, n_best = beam_searcher.predictBeamSearchNet()[s]
         else:
-            predictions = beam_searcher.predictBeamSearchNet(dataset)[s]
+            predictions = beam_searcher.predictBeamSearchNet()[s]
             n_best = None
         if params_prediction['pos_unk']:
             samples = predictions[0]

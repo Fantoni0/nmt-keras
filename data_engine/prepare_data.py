@@ -177,7 +177,7 @@ def build_dataset(params):
                              pad_on_batch=params['PAD_ON_BATCH'],
                              fill=params.get('FILL_TARGET', 'end'),
                              fill_char=params.get('FILL_TARGET', 'end'),
-                             tokenization=conditional_tok,
+                             #tokenization=conditional_tok,
                              sample_weights=params['SAMPLE_WEIGHTS'],
                              max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
                              max_words=params['OUTPUT_VOCABULARY_SIZE'],
