@@ -5,14 +5,14 @@ def load_parameters():
     :return parameters: Dictionary of loaded parameters
     """
 
-    LOSS_WEIGHTS = [1.0, 0.0]
+    LOSS_WEIGHTS =False #[1.0, 0.0]
 
     # Input data params
     TASK_NAME = 'EuTrans'                           # Task name
     DATASET_NAME = TASK_NAME                        # Dataset name
     SRC_LAN = 'en'                                  # Language of the source text
     TRG_LAN = 'es'                                  # Language of the target text
-    DATA_ROOT_PATH = ['/home/fantonio/datasets/EuTrans', '/home/fantonio/datasets/EuTrans']
+    DATA_ROOT_PATH = ['/home/fantonio/datasets/%s/%s/nmtTok' % (DATASET_NAME, SRC_LAN+TRG_LAN), '/home/fantonio/datasets/%s/%s/nmtTok' % (DATASET_NAME, SRC_LAN+TRG_LAN)]
     #'/home/fantonio/datasets/%s/%s/lowercased/joint_bpe' % (DATASET_NAME, SRC_LAN+TRG_LAN)  # Path where data is stored
 
 
@@ -22,8 +22,8 @@ def load_parameters():
                   'test': 'test.'}
 
     # Dataset class parameters
-    INPUTS_IDS_DATASET = ['source_text', 'state_below']  # Corresponding inputs of the dataset
-    INPUTS_IDS_MODEL = ['source_text', 'state_below']  # Corresponding inputs of the built model
+    INPUTS_IDS_DATASET = ['source_text', 'state_below'] # Corresponding inputs of the dataset
+    INPUTS_IDS_MODEL = ['source_text', 'state_below']   # Corresponding inputs of the built model
 
     # if LOSS_WEIGHTS[1] == 0:
     #     OUTPUTS_IDS_DATASET = ['target_char']  # Corresponding outputs of the dataset
@@ -43,8 +43,8 @@ def load_parameters():
     EVAL_ON_SETS = ['val']                        # Possible values: 'train', 'val' and 'test' (external evaluator)
     EVAL_ON_SETS_KERAS = []                       # Possible values: 'train', 'val' and 'test' (Keras' evaluator). Untested.
     START_EVAL_ON_EPOCH = 0                       # First epoch to start the model evaluation
-    EVAL_EACH_EPOCHS = True                       # Select whether evaluate between N epochs or N updates
-    EVAL_EACH = 1                                 # Sets the evaluation frequency (epochs or updates)
+    EVAL_EACH_EPOCHS = False                       # Select whether evaluate between N epochs or N updates
+    EVAL_EACH = 50                                 # Sets the evaluation frequency (epochs or updates)
 
     # Search parameters
     SAMPLING = 'max_likelihood'                   # Possible values: multinomial or max_likelihood (recommended)
@@ -76,7 +76,7 @@ def load_parameters():
     SAMPLE_ON_SETS = ['train', 'val']             # Possible values: 'train', 'val' and 'test'
     N_SAMPLES = 5                                 # Number of samples generated
     START_SAMPLING_ON_EPOCH = 1                   # First epoch where to start the sampling counter
-    SAMPLE_EACH_UPDATES = 500                     # Sampling frequency (always in #updates)
+    SAMPLE_EACH_UPDATES = 7500                     # Sampling frequency (always in #updates)
 
     # Unknown words treatment
     POS_UNK = False                               # Enable POS_UNK strategy for unknown words
@@ -102,7 +102,7 @@ def load_parameters():
                                                   # sets the path to the learned BPE codes.
     DETOKENIZATION_METHOD = ['detokenize_none_char', 'detokenize_none']     # Select which de-tokenization method we'll apply
 
-    APPLY_DETOKENIZATION = [True, True]                   # Wheter we apply a detokenization method
+    APPLY_DETOKENIZATION = [True, False]                   # Wheter we apply a detokenization method
 
     TOKENIZE_HYPOTHESES = [False, False]   		          # Whether we tokenize the hypotheses using the
                                                   # previously defined tokenization method
@@ -114,7 +114,7 @@ def load_parameters():
 
     # Text parameters
     FILL = 'end'                                  # Whether we pad the 'end' or the 'start' of the sentence with 0s
-    PAD_ON_BATCH = [True, 'adapt']                # Whether we take as many timesteps as the longest sequence of
+    PAD_ON_BATCH = [True, True]#'adapt']                # Whether we take as many timesteps as the longest sequence of
                                                   # the batch or a fixed size (MAX_OUTPUT_TEXT_LEN)
 
     # Character model
@@ -133,7 +133,7 @@ def load_parameters():
     OUTPUT_VOCABULARY_SIZE = [0, 0]                    # Size of the input vocabulary. Set to 0 for using all,
                                                   # otherwise it will be truncated to these most frequent words.
     MIN_OCCURRENCES_OUTPUT_VOCAB = [0, 0]              # Minimum number of occurrences allowed for the words in the output vocabulary.
-    MAX_OUTPUT_TEXT_LEN = [120, 120]                      # Maximum length of the output sequence
+    MAX_OUTPUT_TEXT_LEN = [120, 75]                      # Maximum length of the output sequence
                                                   # set to 0 if we want to use the whole answer as a single class
     MAX_OUTPUT_TEXT_LEN_TEST = [MAX_OUTPUT_TEXT_LEN[0] * 3, MAX_OUTPUT_TEXT_LEN[0] * 3]  # Maximum length of the output sequence during test time
 
@@ -144,7 +144,7 @@ def load_parameters():
     SAMPLE_WEIGHTS = True                         # Select whether we use a weights matrix (mask) for the data outputs
 
     OPTIMIZER = 'Adam'                            # Optimizer
-    LR = 0.001                                   # Learning rate. Recommended values - Adam 0.001 - Adadelta 1.0
+    LR = 0.0002                                   # Learning rate. Recommended values - Adam 0.001 - Adadelta 1.0
     CLIP_C = 1.                                   # During training, clip L2 norm of gradients to this value (0. means deactivated)
     CLIP_V = 0.                                   # During training, clip absolute value of gradients to this value (0. means deactivated)
 
@@ -166,7 +166,7 @@ def load_parameters():
 
     # Training parameters
     MAX_EPOCH = 500                               # Stop when computed this number of epochs
-    BATCH_SIZE = 50                               # Size of each minibatch
+    BATCH_SIZE = 15                               # Size of each minibatch
 
     HOMOGENEOUS_BATCHES = False                   # Use batches with homogeneous output lengths (Dangerous!!)
     JOINT_BATCHES = 4                             # When using homogeneous batches, get this number of batches to sort
@@ -177,12 +177,16 @@ def load_parameters():
 
     # Early stop parameters
     EARLY_STOP = True                             # Turns on/off the early stop protocol
-    PATIENCE = 10                                 # We'll stop if the val STOP_METRIC does not improve after this
+    PATIENCE = 12                                 # We'll stop if the val STOP_METRIC does not improve after this
                                                   # number of evaluations
     STOP_METRIC = 'Bleu_4'                        # Metric for the stop
 
     # Model parameters
-    MODEL_TYPE = 'Multitask'     # Model to train. See model_zoo() for the supported architectures
+    MODEL_TYPE = 'MultitaskDecoder'     # Model to train. See model_zoo() for the supported architectures
+    if MODEL_TYPE == 'MultitaskDecoder':
+        INPUTS_IDS_DATASET.append('state_below2') # Corresponding inputs of the dataset
+        INPUTS_IDS_MODEL.append('state_below2')   # Corresponding inputs of the built mod
+
     ENCODER_RNN_TYPE = 'LSTM'                     # Encoder's RNN unit type ('LSTM' and 'GRU' supported)
     DECODER_RNN_TYPE = 'ConditionalLSTM'          # Decoder's RNN unit type
                                                   # ('LSTM', 'GRU', 'ConditionalLSTM' and 'ConditionalGRU' supported)
@@ -234,6 +238,7 @@ def load_parameters():
     #       Here we should specify the activation function and the output dimension
     #       (e.g DEEP_OUTPUT_LAYERS = [('tanh', 600), ('relu', 400), ('relu', 200)])
     DEEP_OUTPUT_LAYERS = [('linear', TARGET_TEXT_EMBEDDING_SIZE[0])]
+    DEEP_OUTPUT_LAYERS_2 = [('linear', TARGET_TEXT_EMBEDDING_SIZE[1])]
 
     # Regularizers
     WEIGHT_DECAY = 0                           # L2 regularization
@@ -246,7 +251,7 @@ def load_parameters():
     USE_NOISE = True                              # Use gaussian noise during training
     NOISE_AMOUNT = 0.01                           # Amount of noise
 
-    USE_BATCH_NORMALIZATION = True                # If True it is recommended to deactivate Dropout
+    USE_BATCH_NORMALIZATION = False                # If True it is recommended to deactivate Dropout
     BATCH_NORMALIZATION_MODE = 1                  # See documentation in Keras' BN
 
     USE_PRELU = False                             # use PReLU activations as regularizer

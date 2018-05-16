@@ -51,7 +51,7 @@ def update_dataset_from_file(ds,
                          split,
                          type='dense_text' if 'sparse' in params['LOSS'] else 'text',
                          id=params['OUTPUTS_IDS_DATASET'][0],
-                         tokenization=conditional_tok,
+                         #tokenization=conditional_tok,
                          build_vocabulary=False,
                          pad_on_batch=params['PAD_ON_BATCH'][0], # Add pads to words to match character sequence
                          fill=params.get('FILL_TARGET', 'end'),
@@ -66,7 +66,7 @@ def update_dataset_from_file(ds,
                          split,
                          type='dense_text' if 'sparse' in params['LOSS'] else 'text',
                          id=params['OUTPUTS_IDS_DATASET'][1],
-                         tokenization=params['TOKENIZATION_METHOD'][1],
+                         #tokenization=params['TOKENIZATION_METHOD'][1],
                          build_vocabulary=False,
                          pad_on_batch=params['PAD_ON_BATCH'][1],
                          fill=params.get('FILL_TARGET', 'end'),
@@ -210,7 +210,6 @@ def build_dataset(params):
                              pad_on_batch=params['PAD_ON_BATCH'][0], # Add pads to words to match character sequence
                              fill=params.get('FILL_TARGET', 'end'),
                              fill_char=params.get('FILL_TARGET', 'end'),
-                             #tokenization=conditional_tok,
                              sample_weights=params['SAMPLE_WEIGHTS'],
                              max_text_len=params['MAX_OUTPUT_TEXT_LEN'][0],
                              max_words=params['OUTPUT_VOCABULARY_SIZE'][0],
@@ -225,7 +224,6 @@ def build_dataset(params):
                              pad_on_batch=params['PAD_ON_BATCH'][1],
                              fill=params.get('FILL_TARGET', 'end'),
                              fill_char=params.get('FILL_TARGET', 'end'),
-                             #tokenization=params['TOKENIZATION_METHOD'][1],
                              sample_weights=params['SAMPLE_WEIGHTS'],
                              max_text_len=params['MAX_OUTPUT_TEXT_LEN'][1],
                              max_words=params['OUTPUT_VOCABULARY_SIZE'][1],
@@ -278,12 +276,36 @@ def build_dataset(params):
                                     char_bpe=params['CHAR_BPE'],
                                     max_words=params['OUTPUT_VOCABULARY_SIZE'][0],
                                     bpe_codes=params.get('BPE_CODES_PATH', None))
+                        if params['MODEL_TYPE'] == 'MultitaskDecoder':
+                            # Second state below for second decoder
+                            ds.setInput(base_path[1] + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
+                                        split,
+                                        type='text',
+                                        id=params['INPUTS_IDS_DATASET'][2],
+                                        required=False,
+                                        tokenization=params['TOKENIZATION_METHOD'][1],
+                                        pad_on_batch=params['PAD_ON_BATCH'],
+                                        build_vocabulary=params['OUTPUTS_IDS_DATASET'][1],
+                                        offset=1,
+                                        fill=params.get('FILL', 'end'),
+                                        max_text_len=params['MAX_OUTPUT_TEXT_LEN'][1],
+                                        max_word_len=0,
+                                        char_bpe=params['CHAR_BPE'],
+                                        max_words=params['OUTPUT_VOCABULARY_SIZE'][1],
+                                        bpe_codes=params.get('BPE_CODES_PATH', None))
                     else:
                         ds.setInput(None,
                                     split,
                                     type='ghost',
-                                    id=params['INPUTS_IDS_DATASET'][-1],
+                                    id=params['INPUTS_IDS_DATASET'][1],
                                     required=False)
+                        if params['MODEL_TYPE'] == 'MultitaskDecoder':
+                            ds.setInput(None,
+                                        split,
+                                        type='ghost',
+                                        id=params['INPUTS_IDS_DATASET'][2],
+                                        required=False)
+
                 if params.get('ALIGN_FROM_RAW', True) and not params.get('HOMOGENEOUS_BATCHES', False):
                     ds.setRawInput(base_path[0] + '/' + params['TEXT_FILES'][split] + params['SRC_LAN'],
                                    split,

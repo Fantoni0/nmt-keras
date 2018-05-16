@@ -125,9 +125,11 @@ if __name__ == "__main__":
                                                      heuristic=heuristic,
                                                      mapping=mapping,
                                                      verbose=args.verbose)
+        print("PREDICTIONS_SAMPLE_ENSEMBLE= ", predictions)
         # Apply detokenization function if needed
         if params.get('APPLY_DETOKENIZATION', False):
             predictions = map(detokenize_function, predictions)
+        print("DECODED_PREDICTIONS_SAMPLE_ENSEMBLE= ", predictions)
 
         if args.n_best:
             n_best_predictions = []
