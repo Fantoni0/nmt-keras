@@ -251,7 +251,7 @@ def load_parameters():
     USE_NOISE = True                              # Use gaussian noise during training
     NOISE_AMOUNT = 0.01                           # Amount of noise
 
-    USE_BATCH_NORMALIZATION = False                # If True it is recommended to deactivate Dropout
+    USE_BATCH_NORMALIZATION = True                # If True it is recommended to deactivate Dropout
     BATCH_NORMALIZATION_MODE = 1                  # See documentation in Keras' BN
 
     USE_PRELU = False                             # use PReLU activations as regularizer

@@ -2510,7 +2510,7 @@ class TranslationModel(Model_Wrapper):
             alpha_regularizer2 = AlphaRegularizer(alpha_factor=params['DOUBLE_STOCHASTIC_ATTENTION_REG'])(alphas2)
 
         [proj_h, shared_reg_proj_h] = Regularize(proj_h, params, shared_layers=True, name='proj_h0')
-        [proj_h2, shared_reg_proj_h2] = Regularize(proj_h2, params, shared_layers=True, name='proj_h02')
+        [proj_h2, shared_reg_proj_h2] = Regularize(proj_h2, params, shared_layers=True, name='proj_h0_2')
 
         # 3.4. Possibly deep decoder
         # TODO: Replicate code for second decoder
@@ -2562,7 +2562,7 @@ class TranslationModel(Model_Wrapper):
                 return_states=True,
                 trainable=params.get('TRAINABLE_DECODER', True),
                 num_inputs=len(current_rnn_input),
-                name='decoder_2' + params['DECODER_RNN_TYPE'].replace('Conditional', '') + 'Cond' + str(n_layer)))
+                name='decoder_' + params['DECODER_RNN_TYPE'].replace('Conditional', '') + 'Cond' + str(n_layer)+ '2'))
 
             current_rnn_output = shared_proj_h_list[-1](current_rnn_input)
             current_rnn_output2 = shared_proj_h_list2[-1](current_rnn_input2)
@@ -2578,7 +2578,7 @@ class TranslationModel(Model_Wrapper):
                                                              name='proj_h' + str(n_layer))
 
             [current_proj_h2, shared_reg_proj_h2] = Regularize(current_proj_h2, params, shared_layers=True,
-                                                             name='proj_h2' + str(n_layer))
+                                                             name='proj_h' + str(n_layer) + '2')
             shared_reg_proj_h_list.append(shared_reg_proj_h)
             shared_reg_proj_h_list2.append(shared_reg_proj_h2)
 
@@ -2732,14 +2732,12 @@ class TranslationModel(Model_Wrapper):
 
         # Store inputs and outputs names for model_init
         self.ids_inputs_init = self.ids_inputs
-        ids_states_names = ['next_state_' + str(i) for i in range(len(h_states_list))]
-        ids_states_names += ['next_state_' + str(i) for i in range(len(h_states_list2))]
+        ids_states_names = ['next_state_' + str(i) for i in range(len(h_states_list)+len(h_states_list2))]
 
         # first output must be the output probs.
         self.ids_outputs_init = self.ids_outputs + ['preprocessed_input'] + ids_states_names
         if 'LSTM' in params['DECODER_RNN_TYPE']:
-            ids_memories_names = ['next_memory_' + str(i) for i in range(len(h_memories_list))]
-            ids_memories_names += ['next_memory_' + str(i) for i in range(len(h_memories_list2))]
+            ids_memories_names = ['next_memory_' + str(i) for i in range(len(h_memories_list)+len(h_states_list2))]
             self.ids_outputs_init += ids_memories_names
         # Second, we need to build an additional model with the capability to have the following inputs:
         #   - preprocessed_input
@@ -2815,6 +2813,11 @@ class TranslationModel(Model_Wrapper):
             for reg in proj_h_reg:
                 current_proj_h = reg(current_proj_h)
             proj_h = Add()([proj_h, current_proj_h])
+
+        out_layer_mlp = shared_FC_mlp(proj_h)
+        out_layer_ctx = shared_FC_ctx(x_att)
+        out_layer_ctx = shared_Lambda_Permute(out_layer_ctx)
+        out_layer_emb = shared_FC_emb(state_below)
 
         # Copia segundo decoder
         for (rnn_decoder_layer2, proj_h_reg2) in zip(shared_proj_h_list2, shared_reg_proj_h_list2):
