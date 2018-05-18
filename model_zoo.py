@@ -2737,7 +2737,7 @@ class TranslationModel(Model_Wrapper):
         # first output must be the output probs.
         self.ids_outputs_init = self.ids_outputs + ['preprocessed_input'] + ids_states_names
         if 'LSTM' in params['DECODER_RNN_TYPE']:
-            ids_memories_names = ['next_memory_' + str(i) for i in range(len(h_memories_list)+len(h_states_list2))]
+            ids_memories_names = ['next_memory_' + str(i) for i in range(len(h_memories_list)+len(h_memories_list2))]
             self.ids_outputs_init += ids_memories_names
         # Second, we need to build an additional model with the capability to have the following inputs:
         #   - preprocessed_input
@@ -2884,9 +2884,6 @@ class TranslationModel(Model_Wrapper):
         if self.return_alphas:
             model_next_outputs.append(alphas)
             model_next_outputs.append(alphas2)
-
-        print "model_next_inputs",model_next_inputs
-        print "model_next_outputs",model_next_outputs
 
         self.model_next = Model(inputs=model_next_inputs,
                                 outputs=model_next_outputs)
