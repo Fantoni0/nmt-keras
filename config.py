@@ -44,7 +44,7 @@ def load_parameters():
     EVAL_ON_SETS_KERAS = []                       # Possible values: 'train', 'val' and 'test' (Keras' evaluator). Untested.
     START_EVAL_ON_EPOCH = 0                       # First epoch to start the model evaluation
     EVAL_EACH_EPOCHS = False                       # Select whether evaluate between N epochs or N updates
-    EVAL_EACH = 50                                 # Sets the evaluation frequency (epochs or updates)
+    EVAL_EACH = 10                                 # Sets the evaluation frequency (epochs or updates)
 
     # Search parameters
     SAMPLING = 'max_likelihood'                   # Possible values: multinomial or max_likelihood (recommended)
@@ -166,7 +166,7 @@ def load_parameters():
 
     # Training parameters
     MAX_EPOCH = 500                               # Stop when computed this number of epochs
-    BATCH_SIZE = 15                               # Size of each minibatch
+    BATCH_SIZE = 2                               # Size of each minibatch
 
     HOMOGENEOUS_BATCHES = False                   # Use batches with homogeneous output lengths (Dangerous!!)
     JOINT_BATCHES = 4                             # When using homogeneous batches, get this number of batches to sort

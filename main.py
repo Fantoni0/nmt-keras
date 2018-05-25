@@ -72,7 +72,7 @@ def train_model(params, load_dataset=None):
             dataset = loadDataset(load_dataset)
 
     params['INPUT_VOCABULARY_SIZE'] = dataset.vocabulary_len[params['INPUTS_IDS_DATASET'][0]]
-    # Cutre solucion - Borrar tan pronto ocmo temrinar de hacer las pruebas.
+    # Cutre solucion - Borrar tan pronto como terminar de hacer las pruebas.
     #if params['LOSS_WEIGHTS'][1] != 0:
     params['OUTPUT_VOCABULARY_SIZE'] = [dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][0]], \
                                         dataset.vocabulary_len[params['OUTPUTS_IDS_DATASET'][1]] ]
@@ -321,16 +321,17 @@ def buildCallbacks(params, model, dataset):
 
         input_text_id = params['INPUTS_IDS_DATASET'][0]
 
-        vocab_x = dataset.vocabulary[input_text_id]['idx2words']
-        vocab_y = dataset.vocabulary[params['OUTPUTS_IDS_DATASET'][0]]['idx2words']
-        '''
+        #vocab_x = dataset.vocabulary[input_text_id]['idx2words']
+        #vocab_y = dataset.vocabulary[params['OUTPUTS_IDS_DATASET'][0]]['idx2words']
+        #vocab_y_2 = dataset.vocabulary[params['OUTPUTS_IDS_DATASET'][1]]['idx2words']
+
         vocab_x = []; vocab_y = []; gt_id = []; gt_pos = []
         for i in range(len(params['OUTPUTS_IDS_DATASET'])):
             vocab_x.append(dataset.vocabulary[input_text_id]['idx2words'])
             vocab_y.append(dataset.vocabulary[params['OUTPUTS_IDS_DATASET'][i]]['idx2words'])
             gt_id.append(params['OUTPUTS_IDS_DATASET'][i])
             gt_pos.append(i)
-        '''
+
         if params['BEAM_SEARCH']:
             extra_vars['beam_size'] = params.get('BEAM_SIZE', 6)
             extra_vars['state_below_index'] = params.get('BEAM_SEARCH_COND_INPUT', -1)
@@ -365,13 +366,46 @@ def buildCallbacks(params, model, dataset):
             for s in params['EVAL_ON_SETS']:
                 extra_vars[s] = dict()
                 extra_vars[s]['references'] = []
-                extra_vars[s]['references'] = dataset.extra_variables[s][params['OUTPUTS_IDS_DATASET'][0]]
-                #for i in range(len(params['OUTPUTS_IDS_DATASET'])):
-                #    extra_vars[s]['references'].append(dataset.extra_variables[s][params['OUTPUTS_IDS_DATASET'][i]])
+                #extra_vars[s]['references'] = dataset.extra_variables[s][params['OUTPUTS_IDS_DATASET'][0]]
+                for i in range(len(params['OUTPUTS_IDS_DATASET'])):
+                    extra_vars[s]['references'].append(dataset.extra_variables[s][params['OUTPUTS_IDS_DATASET'][i]])
 
+                callback_metric = PrintPerformanceMetricOnEpochEndOrEachNUpdates(model,
+                                                                                 dataset,
+                                                                                 gt_id=gt_id,
+                                                                                 gt_pos=gt_pos,
+                                                                                 output_types=['text', 'text'],
+                                                                                 metric_name=[params['METRICS'],
+                                                                                              params['METRICS']],
+                                                                                 set_name=params['EVAL_ON_SETS'],
+                                                                                 batch_size=params['BATCH_SIZE'],
+                                                                                 each_n_epochs=params['EVAL_EACH'],
+                                                                                 extra_vars=extra_vars,
+                                                                                 reload_epoch=params['RELOAD'],
+                                                                                 is_text=True,
+                                                                                 input_text_id=input_text_id,
+                                                                                 index2word_y=vocab_y,
+                                                                                 index2word_x=vocab_x,
+                                                                                 sampling_type=params['SAMPLING'],
+                                                                                 beam_search=params['BEAM_SEARCH'],
+                                                                                 save_path=model.model_path,
+                                                                                 start_eval_on_epoch=params[
+                                                                                     'START_EVAL_ON_EPOCH'],
+                                                                                 write_samples=True,
+                                                                                 write_type=[params['SAMPLING_SAVE_MODE'],
+                                                                                             params['SAMPLING_SAVE_MODE']],
+                                                                                 eval_on_epochs=params['EVAL_EACH_EPOCHS'],
+                                                                                 save_each_evaluation=params[
+                                                                                     'SAVE_EACH_EVALUATION'],
+                                                                                 verbose=params['VERBOSE'])
+
+                callbacks.append(callback_metric)
+            '''
+            #Original
             callback_metric = PrintPerformanceMetricOnEpochEndOrEachNUpdates(model,
                                                                              dataset,
                                                                              gt_id=params['OUTPUTS_IDS_DATASET'][0],
+                                                                             
                                                                              metric_name=params['METRICS'],
                                                                              set_name=params['EVAL_ON_SETS'],
                                                                              batch_size=params['BATCH_SIZE'],
@@ -395,7 +429,7 @@ def buildCallbacks(params, model, dataset):
                                                                              verbose=params['VERBOSE'])
 
             callbacks.append(callback_metric)
-
+            '''
             '''
             callback_metric = PrintPerformanceMetricOnEpochEndOrEachNUpdates(model,
                                                                              dataset,

@@ -2757,7 +2757,7 @@ class TranslationModel(Model_Wrapper):
         prev_h_states_list = [Input(name='prev_state_' + str(i),
                                     shape=tuple([params['DECODER_HIDDEN_SIZE']]))
                               for i in range(len(h_states_list))]
-        prev_h_states_list2 = [Input(name='prev_state_' + str(i) + '2',
+        prev_h_states_list2 = [Input(name='prev_state_' + str(i+1),
                                     shape=tuple([params['DECODER_HIDDEN_SIZE']]))
                               for i in range(len(h_states_list2))]
 
@@ -2770,7 +2770,7 @@ class TranslationModel(Model_Wrapper):
             prev_h_memories_list = [Input(name='prev_memory_' + str(i),
                                           shape=tuple([params['DECODER_HIDDEN_SIZE']]))
                                     for i in range(len(h_memories_list))]
-            prev_h_memories_list2 = [Input(name='prev_memory_' + str(i) + '2',
+            prev_h_memories_list2 = [Input(name='prev_memory_' + str(i+1),
                                           shape=tuple([params['DECODER_HIDDEN_SIZE']]))
                                     for i in range(len(h_memories_list2))]
 
@@ -2904,10 +2904,10 @@ class TranslationModel(Model_Wrapper):
             self.matchings_next_to_next['next_state_' + str(n_state)] = 'prev_state_' + str(n_state)
 
 
-            self.ids_inputs_next.append('prev_state_' + str(n_state) + '2')
-            self.ids_outputs_next.append('next_state_' + str(n_state) + '2')
-            self.matchings_init_to_next['next_state_' + str(n_state) + '2'] = 'prev_state_' + str(n_state) + '2'
-            self.matchings_next_to_next['next_state_' + str(n_state) + '2'] = 'prev_state_' + str(n_state) + '2'
+            self.ids_inputs_next.append('prev_state_' + str(n_state+1))
+            self.ids_outputs_next.append('next_state_' + str(n_state+1))
+            self.matchings_init_to_next['next_state_' + str(n_state+1)] = 'prev_state_' + str(n_state+1)
+            self.matchings_next_to_next['next_state_' + str(n_state+1)] = 'prev_state_' + str(n_state+1)
 
 
         if 'LSTM' in params['DECODER_RNN_TYPE']:
@@ -2917,7 +2917,7 @@ class TranslationModel(Model_Wrapper):
                 self.matchings_init_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
                 self.matchings_next_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
 
-                self.ids_inputs_next.append('prev_memory_' + str(n_memory) + '2')
-                self.ids_outputs_next.append('next_memory_' + str(n_memory) + '2')
-                self.matchings_init_to_next['next_memory_' + str(n_memory) + '2'] = 'prev_memory_' + str(n_memory) + '2'
-                self.matchings_next_to_next['next_memory_' + str(n_memory) + '2'] = 'prev_memory_' + str(n_memory) + '2'
+                self.ids_inputs_next.append('prev_memory_' + str(n_memory+1))
+                self.ids_outputs_next.append('next_memory_' + str(n_memory+1))
+                self.matchings_init_to_next['next_memory_' + str(n_memory+1)] = 'prev_memory_' + str(n_memory+1)
+                self.matchings_next_to_next['next_memory_' + str(n_memory+1)] = 'prev_memory_' + str(n_memory+1)
