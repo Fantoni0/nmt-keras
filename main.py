@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+from __future__ import print_function
+from six import iteritems
 import argparse
 import ast
 from timeit import default_timer as timer
@@ -49,7 +52,7 @@ def train_model(params, load_dataset=None):
                     params['TRG_LAN'] + '.pkl')
                 params['EPOCH_OFFSET'] = params['RELOAD'] if params['RELOAD_EPOCH'] else \
                     int(params['RELOAD'] * params['BATCH_SIZE'] / dataset.len_train)
-                for split, filename in params['TEXT_FILES'].iteritems():
+                for split, filename in iteritems(params['TEXT_FILES']):
                     dataset = update_dataset_from_file(dataset,
                                                        params['DATA_ROOT_PATH'] + '/' + filename + params['SRC_LAN'],
                                                        params,
@@ -127,12 +130,14 @@ def train_model(params, load_dataset=None):
                        'maxlen': params['MAX_OUTPUT_TEXT_LEN'],
                        'joint_batches': params['JOINT_BATCHES'],
                        'lr_decay': params.get('LR_DECAY', None),  # LR decay parameters
+                       'initial_lr': params.get('LR', 1.0),
                        'reduce_each_epochs': params.get('LR_REDUCE_EACH_EPOCHS', True),
                        'start_reduction_on_epoch': params.get('LR_START_REDUCTION_ON_EPOCH', 0),
                        'lr_gamma': params.get('LR_GAMMA', 0.9),
                        'lr_reducer_type': params.get('LR_REDUCER_TYPE', 'linear'),
                        'lr_reducer_exp_base': params.get('LR_REDUCER_EXP_BASE', 0),
                        'lr_half_life': params.get('LR_HALF_LIFE', 50000),
+                       'lr_warmup_exp': params.get('WARMUP_EXP', -1.5),
                        'epochs_for_save': params['EPOCHS_FOR_SAVE'],
                        'verbose': params['VERBOSE'],
                        'eval_on_sets': params['EVAL_ON_SETS_KERAS'],
@@ -224,6 +229,7 @@ def apply_NMT_model(params, load_dataset=None):
         extra_vars['output_max_length_depending_on_x_factor'] = params.get('MAXLEN_GIVEN_X_FACTOR', 3)
         extra_vars['output_min_length_depending_on_x'] = params.get('MINLEN_GIVEN_X', True)
         extra_vars['output_min_length_depending_on_x_factor'] = params.get('MINLEN_GIVEN_X_FACTOR', 2)
+        extra_vars['attend_on_output'] = params.get('ATTEND_ON_OUTPUT', 'transformer' in params['MODEL_TYPE'].lower())
 
         if params['POS_UNK']:
             extra_vars['heuristic'] = params['HEURISTIC']
@@ -308,6 +314,7 @@ def buildCallbacks(params, model, dataset):
             extra_vars['output_max_length_depending_on_x_factor'] = params.get('MAXLEN_GIVEN_X_FACTOR', 3)
             extra_vars['output_min_length_depending_on_x'] = params.get('MINLEN_GIVEN_X', True)
             extra_vars['output_min_length_depending_on_x_factor'] = params.get('MINLEN_GIVEN_X_FACTOR', 2)
+            extra_vars['attend_on_output'] = params.get('ATTEND_ON_OUTPUT', 'transformer' in params['MODEL_TYPE'].lower())
 
             if params['POS_UNK']:
                 extra_vars['heuristic'] = params['HEURISTIC']
@@ -374,24 +381,43 @@ def check_params(params):
     :param params: Model instance on which to apply the callback.
     :return: None
     """
-    if params['POS_UNK']:
-        assert params['OPTIMIZED_SEARCH'], 'Unknown words replacement requires ' \
-                                           'to use the optimized search ("OPTIMIZED_SEARCH" parameter).'
-    if params['COVERAGE_PENALTY']:
-        assert params['OPTIMIZED_SEARCH'], 'The application of "COVERAGE_PENALTY" requires ' \
-                                           'to use the optimized search ("OPTIMIZED_SEARCH" parameter).'
-    if params['SRC_PRETRAINED_VECTORS'] and params['SRC_PRETRAINED_VECTORS'][-4:] != '.npy':
+
+    if params['SRC_PRETRAINED_VECTORS'] and params['SRC_PRETRAINED_VECTORS'][:-1] != '.npy':
         warnings.warn('It seems that the pretrained word vectors provided for the target text are not in npy format.'
                       'You should preprocess the word embeddings with the "utils/preprocess_*_word_vectors.py script.')
 
-    if params['TRG_PRETRAINED_VECTORS'] and params['TRG_PRETRAINED_VECTORS'][-4:] != '.npy':
+    if params['TRG_PRETRAINED_VECTORS'] and params['TRG_PRETRAINED_VECTORS'][:-1] != '.npy':
         warnings.warn('It seems that the pretrained word vectors provided for the target text are not in npy format.'
                       'You should preprocess the word embeddings with the "utils/preprocess_*_word_vectors.py script.')
     if not params['PAD_ON_BATCH']:
         warnings.warn('It is HIGHLY recommended to set the option "PAD_ON_BATCH = True."')
-    if not params.get('TRAINABLE_ENCODER', True) and not params.get('TRAINABLE_DECODER', True):
-        warnings.warn('Non-trainable model!')
 
+    if params['MODEL_TYPE'].lower() == 'transformer':
+
+        assert params['MODEL_SIZE'] == params['TARGET_TEXT_EMBEDDING_SIZE'], 'When using the Transformer model, ' \
+                                                                             'dimensions of "MODEL_SIZE" and "TARGET_TEXT_EMBEDDING_SIZE" must match. ' \
+                                                                             'Currently, they are: %d and %d, respectively.' % (params['MODEL_SIZE'], params['TARGET_TEXT_EMBEDDING_SIZE'])
+        assert params['MODEL_SIZE'] == params['SOURCE_TEXT_EMBEDDING_SIZE'], 'When using the Transformer model, ' \
+                                                                             'dimensions of "MODEL_SIZE" and "SOURCE_TEXT_EMBEDDING_SIZE" must match. ' \
+                                                                             'Currently, they are: %d and %d, respectively.' % (params['MODEL_SIZE'], params['SOURCE_TEXT_EMBEDDING_SIZE'])
+
+        if params['POS_UNK']:
+            warnings.warn('The "POS_UNK" option is still unimplemented for the "Transformer" model. '
+                          'Setting it to False.')
+            params['POS_UNK'] = False
+        assert params['MODEL_SIZE'] % params['N_HEADS'] == 0, \
+            '"MODEL_SIZE" should be a multiple of "N_HEADS". ' \
+            'Currently: mod(%d, %d) == %d.' % (params['MODEL_SIZE'], params['N_HEADS'], params['MODEL_SIZE'] % params['N_HEADS'])
+
+    if params['POS_UNK']:
+        if not params['OPTIMIZED_SEARCH']:
+            warnings.warn('Unknown words replacement requires to use the optimized search ("OPTIMIZED_SEARCH" parameter). Setting "POS_UNK" to False.')
+            params['POS_UNK'] = False
+
+    if params['COVERAGE_PENALTY']:
+        assert params['OPTIMIZED_SEARCH'], 'The application of "COVERAGE_PENALTY" requires ' \
+                                           'to use the optimized search ("OPTIMIZED_SEARCH" parameter).'
+    return params
 
 if __name__ == "__main__":
     args = parse_args()
@@ -403,17 +429,17 @@ if __name__ == "__main__":
             try:
                 k, v = arg.split('=')
             except ValueError:
-                print 'Overwritten arguments must have the form key=Value. \n Currently are: %s' % str(args.changes)
+                print ('Overwritten arguments must have the form key=Value. \n Currently are: %s' % str(args.changes))
                 exit(1)
             try:
                 parameters[k] = ast.literal_eval(v)
             except ValueError:
                 parameters[k] = v
     except ValueError:
-        print 'Error processing arguments: (', k, ",", v, ")"
+        print ('Error processing arguments: (', k, ",", v, ")")
         exit(2)
 
-    check_params(parameters)
+    parameters = check_params(parameters)
     if parameters['MODE'] == 'training':
         logging.info('Running training.')
         train_model(parameters, args.dataset)

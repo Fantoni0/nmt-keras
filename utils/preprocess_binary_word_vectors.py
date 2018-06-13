@@ -1,17 +1,12 @@
+# -*- coding: utf-8 -*-
+from __future__ import print_function
 import numpy as np
+import argparse
+from os.path import basename, dirname
+
 
 # Preprocess pretrained binary vectors
 # and stores them in a suitable format (.npy)
-
-# Parameters
-ROOT_PATH = '/media/HDD_2TB/DATASETS/'  # Data root path
-base_path = ROOT_PATH + 'cnn_polarity/DATA/'  # Binary vectors path
-vectors_basename = 'word2vec.'  # Name of the vectors file
-language = 'fr'  # Language
-dest_file = 'word2vec.' + language  # Destination file
-
-vectors_path = base_path + vectors_basename + language
-
 
 def word2vec2npy(v_path, base_path_save, dest_filename):
     """
@@ -21,15 +16,14 @@ def word2vec2npy(v_path, base_path_save, dest_filename):
     :param dest_filename: Filename of the formatted vectors.
     """
     word_vecs = dict()
-    print "Loading vectors from %s" % v_path
-
+    print ("Loading vectors from %s" % v_path)
     with open(v_path, "rb") as f:
         header = f.readline()
         vocab_size, layer1_size = map(int, header.split())
         binary_len = np.dtype('float32').itemsize * layer1_size
         i = 0
-        print "Vector length:", layer1_size
-        for _ in xrange(vocab_size):
+        print ("Vector length:", layer1_size)
+        for _ in range(vocab_size):
             word = []
             while True:
                 ch = f.read(1)
@@ -42,15 +36,26 @@ def word2vec2npy(v_path, base_path_save, dest_filename):
                                             dtype='float32')
             i += 1
             if i % 1000 == 0:
-                print "Processed %d vectors (%.2f %%)\r" % \
-                      (i, 100 * float(i) / vocab_size),
+                print ("Processed %d vectors (%.2f %%)\r" % (i, 100 * float(i) / vocab_size),)
 
     # Store dict
-    print "Saving word vectors in %s" % \
-          (base_path_save + '/' + dest_filename + '.npy')
+    print ("")
+    print ("Saving word vectors in %s" % (base_path_save + '/' + dest_filename + '.npy'))
     np.save(base_path_save + '/' + dest_filename + '.npy', word_vecs)
-    print
+    print("")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser("Preprocess pre-trained word embeddings.")
+    parser.add_argument("-v", "--vectors", required=True, help="Pre-trained word embeddings file.",
+                        default="GoogleNews-vectors-negative300.bin")
+    parser.add_argument("-d", "--destination", required=True, help="Destination file.", default='word2vec.en')
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
-    word2vec2npy(vectors_path, base_path, dest_file)
+    args = parse_args()
+    dest_file = basename(args.destination)
+    base_path = dirname(args.destination)
+
+    word2vec2npy(args.vectors, base_path, dest_file)

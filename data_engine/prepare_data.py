@@ -1,5 +1,5 @@
-from keras_wrapper.dataset import Dataset, saveDataset, loadDataset
 import logging
+from keras_wrapper.dataset import Dataset, saveDataset, loadDataset
 
 logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] %(message)s', datefmt='%d/%m/%Y %H:%M:%S')
 
@@ -39,6 +39,9 @@ def update_dataset_from_file(ds,
     if splits is None:
         splits = ['val']
 
+    if output_text_filename is None:
+        recompute_references = False
+
     for split in splits:
         if remove_outputs:
             ds.removeOutput(split,
@@ -51,15 +54,16 @@ def update_dataset_from_file(ds,
                          split,
                          type='dense_text' if 'sparse' in params['LOSS'] else 'text',
                          id=params['OUTPUTS_IDS_DATASET'][0],
-                         tokenization=conditional_tok,
+                         tokenization=params.get('TOKENIZATION_METHOD', 'tokenize_none'),
                          build_vocabulary=False,
-                         pad_on_batch=params['PAD_ON_BATCH'],
-                         fill=params.get('FILL_TARGET', 'end'),
-                         sample_weights=params['SAMPLE_WEIGHTS'],
-                         max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
-                         max_words=params['OUTPUT_VOCABULARY_SIZE'],
-                         min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'],
+                         pad_on_batch=params.get('PAD_ON_BATCH', True),
+                         fill=params.get('FILL', 'end'),
+                         sample_weights=params.get('SAMPLE_WEIGHTS', True),
+                         max_text_len=params.get('MAX_OUTPUT_TEXT_LEN', 100),
+                         max_words=params.get('OUTPUT_VOCABULARY_SIZE', 0),
+                         min_occ=params.get('MIN_OCCURRENCES_OUTPUT_VOCAB', 0),
                          bpe_codes=params.get('BPE_CODES_PATH', None),
+                         label_smoothing=params.get('LABEL_SMOOTHING', 0.),
                          overwrite_split=True)
 
         # INPUT DATA
@@ -67,7 +71,7 @@ def update_dataset_from_file(ds,
                     split,
                     type='text',
                     id=params['INPUTS_IDS_DATASET'][0],
-                    tokenization= params.get('TOKENIZATION_METHOD', 'tokenize_none'),
+                    tokenization=params.get('TOKENIZATION_METHOD', 'tokenize_none'),
                     build_vocabulary=False,
                     pad_on_batch=params.get('PAD_ON_BATCH', True),
                     fill=params.get('FILL', 'end'),
@@ -130,7 +134,7 @@ def build_dataset(params):
         if params['VERBOSE'] > 0:
             silence = False
             logging.info(
-                'Building ' + params['TASK_NAME'] + '_' + params['SRC_LAN'] + params['TRG_LAN'] + ' dataset')
+                'Building ' + params['DATASET_NAME'] + '_' + params['SRC_LAN'] + params['TRG_LAN'] + ' dataset')
         else:
             silence = True
 
@@ -153,16 +157,14 @@ def build_dataset(params):
                      id=params['OUTPUTS_IDS_DATASET'][0],
                      tokenization=conditional_tok,
                      build_vocabulary=True,
-                     pad_on_batch=params['PAD_ON_BATCH'],
-                     fill=params.get('FILL_TARGET', 'end'),
-                     fill_char=params.get('FILL_TARGET', 'end'),
-                     sample_weights=params['SAMPLE_WEIGHTS'],
-                     max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
-                     char_bpe=params['CHAR_BPE'],
-                     max_words=params['OUTPUT_VOCABULARY_SIZE'],
-                     min_occ=params['MIN_OCCURRENCES_OUTPUT_VOCAB'],
+                     pad_on_batch=params.get('PAD_ON_BATCH', True),
+                     sample_weights=params.get('SAMPLE_WEIGHTS', True),
+                     fill=params.get('FILL', 'end'),
+                     max_text_len=params.get('MAX_OUTPUT_TEXT_LEN', 70),
+                     max_words=params.get('OUTPUT_VOCABULARY_SIZE', 0),
+                     min_occ=params.get('MIN_OCCURRENCES_OUTPUT_VOCAB', 0),
                      bpe_codes=params.get('BPE_CODES_PATH', None))
-        if params['ALIGN_FROM_RAW'] and not params['HOMOGENEOUS_BATCHES']:
+        if params.get('ALIGN_FROM_RAW', True) and not params.get('HOMOGENEOUS_BATCHES', False):
             ds.setRawOutput(base_path + '/' + params['TEXT_FILES']['train'] + params['TRG_LAN'],
                             'train',
                             type='file-name',
@@ -174,16 +176,15 @@ def build_dataset(params):
                              split,
                              type='dense_text' if 'sparse' in params['LOSS'] else 'text',
                              id=params['OUTPUTS_IDS_DATASET'][0],
-                             pad_on_batch=params['PAD_ON_BATCH'],
+                             pad_on_batch=params.get('PAD_ON_BATCH', True),
                              fill=params.get('FILL_TARGET', 'end'),
                              fill_char=params.get('FILL_TARGET', 'end'),
-                             #tokenization=conditional_tok,
-                             sample_weights=params['SAMPLE_WEIGHTS'],
-                             max_text_len=params['MAX_OUTPUT_TEXT_LEN'],
-                             max_words=params['OUTPUT_VOCABULARY_SIZE'],
+                             sample_weights=params.get('SAMPLE_WEIGHTS', True),
+                             max_text_len=params.get('MAX_OUTPUT_TEXT_LEN', 70),
+                             max_words=params.get('OUTPUT_VOCABULARY_SIZE', 0),
                              bpe_codes=params.get('BPE_CODES_PATH', None))
-                if params['ALIGN_FROM_RAW'] and not params['HOMOGENEOUS_BATCHES']:
-                    ds.setRawOutput(base_path + '/' + params['TEXT_FILES'][split]   + params['TRG_LAN'],
+                if params.get('ALIGN_FROM_RAW', True) and not params.get('HOMOGENEOUS_BATCHES', False):
+                    ds.setRawOutput(base_path + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
                                     split,
                                     type='file-name',
                                     id='raw_' + params['OUTPUTS_IDS_DATASET'][0])
@@ -212,7 +213,7 @@ def build_dataset(params):
                             min_occ=params['MIN_OCCURRENCES_INPUT_VOCAB'],
                             bpe_codes=params.get('BPE_CODES_PATH', None))
 
-                if len(params['INPUTS_IDS_DATASET']) > 1: #State_below
+                if len(params['INPUTS_IDS_DATASET']) > 1:
                     if 'train' in split:
                         ds.setInput(base_path + '/' + params['TEXT_FILES'][split] + params['TRG_LAN'],
                                     split,
@@ -253,8 +254,8 @@ def build_dataset(params):
 
     else:
         # We can easily recover it with a single line
-        ds = loadDataset(params['DATASET_STORE_PATH'] + '/Dataset_' + params['DATASET_NAME']
-                         + '_' + params['SRC_LAN'] + params['TRG_LAN'] + '.pkl')
+        ds = loadDataset(
+            params['DATASET_STORE_PATH'] + '/Dataset_' + params['DATASET_NAME'] + '_' + params['SRC_LAN'] + params['TRG_LAN'] + '.pkl')
 
         # If we had multiple references per sentence
         keep_n_captions(ds, repeat=1, n=1, set_names=params['EVAL_ON_SETS'])
@@ -282,30 +283,32 @@ def keep_n_captions(ds, repeat, n=1, set_names=None):
         logging.info('Keeping ' + str(n) + ' captions per input on the ' + str(s) + ' set.')
 
         ds.extra_variables[s] = dict()
-        exec ('n_samples = ds.len_' + s)
-
+        n_samples = getattr(ds, 'len_' + s)
         # Process inputs
         for id_in in ds.ids_inputs:
             new_X = []
             if id_in in ds.optional_inputs:
                 try:
-                    exec ('X = ds.X_' + s)
+                    X = getattr(ds, 'X_' + s)
                     for i in range(0, n_samples, repeat):
                         for j in range(n):
                             new_X.append(X[id_in][i + j])
-                    exec ('ds.X_' + s + '[id_in] = new_X')
+                    setattr(ds, 'X_' + s + '[' + id_in + ']', new_X)
                 except Exception:
                     pass
             else:
-                exec ('X = ds.X_' + s)
+                X = getattr(ds, 'X_' + s)
                 for i in range(0, n_samples, repeat):
                     for j in range(n):
                         new_X.append(X[id_in][i + j])
-                exec ('ds.X_' + s + '[id_in] = new_X')
+                aux_list = getattr(ds, 'X_' + s)
+                aux_list[id_in] = new_X
+                setattr(ds, 'X_' + s, aux_list)
+                del aux_list
         # Process outputs
         for id_out in ds.ids_outputs:
             new_Y = []
-            exec ('Y = ds.Y_' + s)
+            Y = getattr(ds, 'Y_' + s)
             dict_Y = dict()
             count_samples = 0
             for i in range(0, n_samples, repeat):
@@ -315,10 +318,16 @@ def keep_n_captions(ds, repeat, n=1, set_names=None):
                         new_Y.append(Y[id_out][i + j])
                     dict_Y[count_samples].append(Y[id_out][i + j])
                 count_samples += 1
-            exec ('ds.Y_' + s + '[id_out] = new_Y')
+
+            aux_list = getattr(ds, 'Y_' + s)
+            aux_list[id_out] = new_Y
+            setattr(ds, 'Y_' + s, aux_list)
+            del aux_list
+
             # store dictionary with img_pos -> [cap1, cap2, cap3, ..., capN]
             ds.extra_variables[s][id_out] = dict_Y
 
         new_len = len(new_Y)
-        exec ('ds.len_' + s + ' = new_len')
+        setattr(ds, 'len_' + s, new_len)
+
         logging.info('Samples reduced to ' + str(new_len) + ' in ' + s + ' set.')
