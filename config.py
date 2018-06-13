@@ -6,11 +6,11 @@ def load_parameters():
     """
 
     # Input data params
-    TASK_NAME = 'europarl'                           # Task name
+    TASK_NAME = 'ted'                           # Task name
     DATASET_NAME = TASK_NAME                        # Dataset name
     SRC_LAN = 'en'                                  # Language of the source text
-    TRG_LAN = 'fr'                                  # Language of the target text
-    DATA_ROOT_PATH = '/home/fantonio/datasets/%s/%s/joint_bpe' % (DATASET_NAME, SRC_LAN+TRG_LAN)  # Path where data is stored
+    TRG_LAN = 'de'                                  # Language of the target text
+    DATA_ROOT_PATH = '/home/fantonio/datasets/%s/%s/nmtTok/joint_bpe' % (DATASET_NAME, SRC_LAN+TRG_LAN)  # Path where data is stored
 
     # SRC_LAN or TRG_LAN will be added to the file names
     TEXT_FILES = {'train': 'training.',        # Data files
@@ -29,7 +29,7 @@ def load_parameters():
     EVAL_ON_SETS_KERAS = []                       # Possible values: 'train', 'val' and 'test' (Keras' evaluator). Untested.
     START_EVAL_ON_EPOCH = 1                       # First epoch to start the model evaluation
     EVAL_EACH_EPOCHS = False                       # Select whether evaluate between N epochs or N updates
-    EVAL_EACH = 3750                                 # Sets the evaluation frequency (epochs or updates)
+    EVAL_EACH = 1600                                 # Sets the evaluation frequency (epochs or updates)
 
     # Search parameters
     SAMPLING = 'max_likelihood'                   # Possible values: multinomial or max_likelihood (recommended)
@@ -84,9 +84,9 @@ def load_parameters():
                                                   # See Dataset class (from stager_keras_wrapper) for more info.
     BPE_CODES_PATH = DATA_ROOT_PATH + '/training_codes.joint'    # If TOKENIZATION_METHOD = 'tokenize_bpe',
                                                   # sets the path to the learned BPE codes.
-    DETOKENIZATION_METHOD = 'detokenize_bpe'     # Select which de-tokenization method we'll apply
+    DETOKENIZATION_METHOD = 'tokenize_none'     # Select which de-tokenization method we'll apply
 
-    APPLY_DETOKENIZATION = True                  # Wheter we apply a detokenization method
+    APPLY_DETOKENIZATION = False                  # Wheter we apply a detokenization method
 
     TOKENIZE_HYPOTHESES = False   		          # Whether we tokenize the hypotheses using the
                                                   # previously defined tokenization method
@@ -127,7 +127,7 @@ def load_parameters():
     SAMPLE_WEIGHTS = True                         # Select whether we use a weights matrix (mask) for the data outputs
 
     OPTIMIZER = 'Adam'                            # Optimizer
-    LR = 0.001                                    # Learning rate. Recommended values - Adam 0.001 - Adadelta 1.0
+    LR = 0.0002                                    # Learning rate. Recommended values - Adam 0.001 - Adadelta 1.0
     CLIP_C = 1.                                   # During training, clip L2 norm of gradients to this value (0. means deactivated)
     CLIP_V = 0.                                   # During training, clip absolute value of gradients to this value (0. means deactivated)
 
@@ -149,7 +149,7 @@ def load_parameters():
 
     # Training parameters
     MAX_EPOCH = 500                               # Stop when computed this number of epochs
-    BATCH_SIZE = 50                               # Size of each minibatch
+    BATCH_SIZE = 30                               # Size of each minibatch
 
     HOMOGENEOUS_BATCHES = False                   # Use batches with homogeneous output lengths (Dangerous!!)
     JOINT_BATCHES = 4                             # When using homogeneous batches, get this number of batches to sort
@@ -160,7 +160,7 @@ def load_parameters():
 
     # Early stop parameters
     EARLY_STOP = True                             # Turns on/off the early stop protocol
-    PATIENCE = 10                                 # We'll stop if the val STOP_METRIC does not improve after this
+    PATIENCE = 15                                 # We'll stop if the val STOP_METRIC does not improve after this
                                                   # number of evaluations
     STOP_METRIC = 'Bleu_4'                        # Metric for the stop
 
