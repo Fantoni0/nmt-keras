@@ -37,13 +37,13 @@ def load_parameters():
     BEAM_SEARCH = True                            # Switches on-off the beam search procedure.
     BEAM_SIZE = 8                                 # Beam size (in case of BEAM_SEARCH == True).
     OPTIMIZED_SEARCH = True                       # Compute annotations only a single time per sample.
-    SEARCH_PRUNING = False                        # Apply pruning strategies to the beam search method..
-                                                  # It will likely increase decoding speed, but decrease quality..
+    SEARCH_PRUNING = False                        # Apply pruning strategies to the beam search method.
+                                                  # It will likely increase decoding speed, but decrease quality.
     MAXLEN_GIVEN_X = True                         # Generate translations of similar length to the source sentences.
-    MAXLEN_GIVEN_X_FACTOR = 2                     # The hypotheses will have (as maximum) the number of words of the.
+    MAXLEN_GIVEN_X_FACTOR = 2                     # The hypotheses will have (as maximum) the number of words of the
                                                   # source sentence * LENGTH_Y_GIVEN_X_FACTOR.
     MINLEN_GIVEN_X = True                         # Generate translations of similar length to the source sentences.
-    MINLEN_GIVEN_X_FACTOR = 3                     # The hypotheses will have (as minimum) the number of words of the.
+    MINLEN_GIVEN_X_FACTOR = 3                     # The hypotheses will have (as minimum) the number of words of the
                                                   # source sentence / LENGTH_Y_GIVEN_X_FACTOR.
 
     # Apply length and coverage decoding normalizations.
@@ -139,11 +139,12 @@ def load_parameters():
     RHO = 0.9                                     # Rho value (for Adadelta and RMSprop optimizers).
     BETA_1 = 0.9                                  # Beta 1 value (for Adam, Adamax Nadam optimizers).
     BETA_2 = 0.999                                # Beta 2 value (for Adam, Adamax Nadam optimizers).
-    EPSILON = 1e-7  # Oprimizers epsilon value.
+    AMSGRAD = False                               # Whether to apply the AMSGrad variant of Adam (see https://openreview.net/pdf?id=ryQu7f-RZ).
+    EPSILON = 1e-7                                # Optimizers epsilon value.
 
-    # Learning rate annealing
-    LR_DECAY = None                                  # Frequency (number of epochs or updates) between LR annealings. Set to None for not decay the learning rate.
-    LR_GAMMA = .8                                 # Multiplier used for decreasing the LR.
+    # Learning rate schedule
+    LR_DECAY = None                               # Frequency (number of epochs or updates) between LR annealings. Set to None for not decay the learning rate.
+    LR_GAMMA = 0.8                                # Multiplier used for decreasing the LR.
     LR_REDUCE_EACH_EPOCHS = False                 # Reduce each LR_DECAY number of epochs or updates.
     LR_START_REDUCTION_ON_EPOCH = 0               # Epoch to start the reduction.
     LR_REDUCER_TYPE = 'noam'                      # Function to reduce. 'linear' and 'exponential' implemented..
@@ -212,7 +213,7 @@ def load_parameters():
     ENCODER_RNN_TYPE = 'LSTM'                     # Encoder's RNN unit type ('LSTM' and 'GRU' supported).
     DECODER_RNN_TYPE = 'ConditionalLSTM'          # Decoder's RNN unit type.
                                                   # ('LSTM', 'GRU', 'ConditionalLSTM' and 'ConditionalGRU' supported).
-    ATTENTION_MODE = 'add'                        # Attention mode. 'add' (Bahdanau-style) or 'dot' (Luong-style).
+    ATTENTION_MODE = 'add'                        # Attention mode. 'add' (Bahdanau-style), 'dot' (Luong-style) or 'scaled-dot'.
 
     # Encoder configuration
     ENCODER_HIDDEN_SIZE = 512                      # For models with RNN encoder.

@@ -1,6 +1,6 @@
 # NMT-Keras
 
-[![Documentation](https://readthedocs.org/projects/nmt-keras/badge/?version=latest)](https://nmt-keras.readthedocs.io) [![Build Status](https://travis-ci.org/lvapeab/nmt-keras.svg?branch=master)](https://travis-ci.org/lvapeab/nmt-keras) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1239923bcbba438b97b374ae8dc435be)](https://www.codacy.com/app/lvapeab/nmt-keras?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=lvapeab/nmt-keras&amp;utm_campaign=Badge_Grade) [![Requirements Status](https://requires.io/github/lvapeab/nmt-keras/requirements.svg?branch=master)](https://requires.io/github/lvapeab/nmt-keras/requirements/?branch=master) [![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
+[![Documentation](https://readthedocs.org/projects/nmt-keras/badge/?version=latest)](https://nmt-keras.readthedocs.io) [![Build Status](https://travis-ci.org/lvapeab/nmt-keras.svg?branch=master)](https://travis-ci.org/lvapeab/nmt-keras) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1239923bcbba438b97b374ae8dc435be)](https://www.codacy.com/app/lvapeab/nmt-keras?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=lvapeab/nmt-keras&amp;utm_campaign=Badge_Grade) [![Requirements Status](https://requires.io/github/lvapeab/nmt-keras/requirements.svg?branch=master)](https://requires.io/github/lvapeab/nmt-keras/requirements/?branch=master) ![Compatibility](https://img.shields.io/badge/Python-2.7%2F3.6-blue.svg) [![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/lvapeab/nmt-keras/blob/master/LICENSE)
 
 Neural Machine Translation with Keras (Theano and Tensorflow).
 
@@ -23,7 +23,7 @@ Library documentation: [nmt-keras.readthedocs.io](https://nmt-keras.readthedocs.
 
 
 ## Features (in addition to the full Keras cosmos): 
- * :heavy_exclamation_mark: First version of the Transformer model (from [Attention is All You Need](https://arxiv.org/abs/1706.03762)). Somewhat untested and missing the tied embeddings.
+ * :heavy_exclamation_mark: [Transformer model](https://arxiv.org/abs/1706.03762) (missing the tied embeddings).
  * [Tensorboard integration](https://github.com/lvapeab/nmt-keras/blob/master/examples/documentation/tensorboard_integration.md).
  * Online learning and Interactive neural machine translation (INMT). See [the interactive NMT branch](https://github.com/lvapeab/nmt-keras/tree/interactive_NMT).
  * Attention model over the input sequence of annotations.
@@ -132,6 +132,8 @@ optional arguments:
 
 ## Resources
 
+ * [examples/documentation/nmt-keras_paper.pdf](https://github.com/lvapeab/nmt-keras/blob/master/examples/documentation/nmt-keras_paper.pdf) contains a general overview of the NMT-Keras framework.
+ 
  * In [examples/documentation/neural_machine_translation.pdf](https://github.com/lvapeab/nmt-keras/blob/master/examples/documentation/neural_machine_translation.pdf) you'll find an overview of an attentional NMT system.
 
  * In the [examples](https://github.com/lvapeab/nmt-keras/blob/master/examples/) folder you'll find some tutorials for running this library. They are expected to be followed in order:
@@ -150,13 +152,16 @@ optional arguments:
 If you use this toolkit in your research, please cite:
 
 ```
-@misc{nmt-keras2017,
-	author = {Peris, {\'A}lvaro},
-	title = {{NMT}-{K}eras},
-	year = {2017},
-	publisher = {GitHub},
-	note = {GitHub repository},
-	howpublished = {\url{https://github.com/lvapeab/nmt-keras}},
+@article{nmt-keras:2018,
+ journal = {The Prague Bulletin of Mathematical Linguistics},
+ title = {{NMT-Keras: a Very Flexible Toolkit with a Focus on Interactive NMT and Online Learning}},
+ author = {\'{A}lvaro Peris and Francisco Casacuberta},
+ year = {2018},
+ volume = {111},
+ pages = {113--124},
+ doi = {10.2478/pralin-2018-0010},
+ issn = {0032-6585},
+ url = {https://ufal.mff.cuni.cz/pbml/111/art-peris-casacuberta.pdf}
 }
 ```
 
@@ -174,13 +179,29 @@ Much of this library has been developed together with [Marc Bolaños](https://gi
 
 To see other projects following the same philosophy and style of NMT-Keras, take a look to:
 
-[TMA for egocentric captioning based on temporally-linked sequences](https://github.com/MarcBS/TMA).
+[TMA: Egocentric captioning based on temporally-linked sequences](https://github.com/MarcBS/TMA).
 
-[VIBIKNet for visual question answering](https://github.com/MarcBS/VIBIKNet).
+[VIBIKNet: Visual question answering](https://github.com/MarcBS/VIBIKNet).
 
-[ABiViRNet for video description](https://github.com/lvapeab/ABiViRNet).
+[ABiViRNet: Video description](https://github.com/lvapeab/ABiViRNet).
 
-[Sentence SelectioNN for sentence classification and selection](https://github.com/lvapeab/sentence-selectioNN).
+[Sentence SelectioNN: Sentence classification and selection](https://github.com/lvapeab/sentence-selectioNN).
+
+[DeepQuest: State-of-the-art models for multi-level Quality Estimation](https://github.com/sheffieldnlp/deepQuest).
+
+
+### Warning!
+
+There is a [known issue](https://github.com/Theano/Theano/issues/5994) with the `Theano` backend. When running `NMT-Keras`, it will show the following message:
+
+```
+[...]
+raise theano.gof.InconsistencyError("Trying to reintroduce a removed node")
+InconsistencyError: Trying to reintroduce a removed node
+```
+
+It is not a critical error, the model keeps working and it is safe to ignore it. However, if you want the message to be gone, use the Theano flag `optimizer_excluding=scanOp_pushout_output`.
+
 
 
 ## Contact
