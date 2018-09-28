@@ -1061,7 +1061,6 @@ class TranslationModel(Model_Wrapper):
         preprocessed_annotations = Input(name='preprocessed_input',
                                          shape=tuple([None, preprocessed_size]),
                                          dtype='float32')
-
         # Apply decoder
         prev_state_below = state_below
 
@@ -1136,390 +1135,8 @@ class TranslationModel(Model_Wrapper):
         self.matchings_init_to_next = {'preprocessed_input': 'preprocessed_input'}
         self.matchings_next_to_next = {'preprocessed_input': 'preprocessed_input'}
 
-    def TransformerCache(self, params):
-        """
-        Neural machine translation consisting in stacking blocks of:
-            * multi-head self-attention mechanism
-            * position-wise fully connected feed-forward networks.
-
-        See https://arxiv.org/abs/1706.03762 for an in-depth review of the model.
-
-        :param params: Dictionary of params (see config.py)
-        :return: None
-        """
-
-        # 1. Source text input
-        src_text = Input(name=self.ids_inputs[0], batch_shape=tuple([None, None]), dtype='int32')
-        src_positions = PositionLayer(name='position_layer_src_text')(src_text)
-
-        # 2. Encoder
-        # 2.1. Source word embedding
-        src_embedding = Embedding(params['INPUT_VOCABULARY_SIZE'],
-                                  params['SOURCE_TEXT_EMBEDDING_SIZE'],
-                                  name='source_word_embedding',
-                                  embeddings_regularizer=l2(params['WEIGHT_DECAY']),
-                                  embeddings_initializer=params['INIT_FUNCTION'],
-                                  trainable=self.src_embedding_weights_trainable,
-                                  weights=self.src_embedding_weights,
-                                  mask_zero=True)(src_text)
-
-        if params.get('SCALE_SOURCE_WORD_EMBEDDINGS', False):
-            src_embedding = SqrtScaling(params['MODEL_SIZE'])(src_embedding)
-        if params['TARGET_TEXT_EMBEDDING_SIZE'] == params['SOURCE_TEXT_EMBEDDING_SIZE']:
-            max_len = max(params['MAX_INPUT_TEXT_LEN'], params['MAX_OUTPUT_TEXT_LEN'], params['MAX_OUTPUT_TEXT_LEN_TEST'])
-        else:
-            max_len = params['MAX_INPUT_TEXT_LEN']
-
-        positional_embedding = Embedding(max_len,
-                                         params['SOURCE_TEXT_EMBEDDING_SIZE'],
-                                         name='positional_src_word_embedding',
-                                         trainable=False,
-                                         weights=getPositionalEncodingWeights(max_len,
-                                                                              params['SOURCE_TEXT_EMBEDDING_SIZE'],
-                                                                              name='positional_src_word_embedding',
-                                                                              verbose=self.verbose))
-        positional_src_embedding = positional_embedding(src_positions)
-        src_residual_multihead = Add(name='add_src_embedding_positional_src_embedding')([src_embedding, positional_src_embedding])
-
-        # Regularize
-        src_residual_multihead = Dropout(params['DROPOUT_P'])(src_residual_multihead)
-
-        prev_src_residual_multihead = src_residual_multihead
-
-        # Left tranformer block (encoder)
-        for n_block in range(params['N_LAYERS_ENCODER']):
-            src_multihead = MultiHeadAttention(params['N_HEADS'],
-                                               params['MODEL_SIZE'],
-                                               dropout=params.get('ATTENTION_DROPOUT_P', 0.),
-                                               name='src_MultiHeadAttention_' + str(n_block))([src_residual_multihead,
-                                                                                               src_residual_multihead])
-            # Regularize
-            src_multihead = Dropout(params['DROPOUT_P'])(src_multihead)
-            # Add
-            src_multihead = Add(name='src_Residual_MultiHeadAttention_' + str(n_block))([src_multihead, prev_src_residual_multihead])
-
-            # And norm
-            src_multihead = BatchNormalization(mode=1, name='src_Normalization_MultiHeadAttention_' + str(n_block))(src_multihead)
-
-            # FF
-            ff_src_multihead = TimeDistributed(PositionwiseFeedForwardDense(params['FF_SIZE']))(src_multihead)
-            # Regularize
-            ff_src_multihead = Dropout(params['DROPOUT_P'])(ff_src_multihead)
-
-            # Add
-            src_multihead = Add(name='src_Residual_FF_' + str(n_block))([ff_src_multihead, src_multihead])
-            # And norm
-            src_multihead = BatchNormalization(mode=1, name='src_Normalization_FF_' + str(n_block))(src_multihead)
-
-            prev_src_residual_multihead = src_multihead
-            src_residual_multihead = src_multihead
-
-        masked_src_multihead = MaskLayer()(prev_src_residual_multihead)  # We may want the padded annotations
-
-        ################
-        ##### CACHE #### # If something explodes this code is responsible
-        ################
-
-        masked_src_multihead = TimeDistributed(CacheLayer(cache_size))(masked_src_multihead)
-
-        # 3.1.1. Previously generated words as inputs for training -> Teacher forcing
-        next_words = Input(name=self.ids_inputs[1], batch_shape=tuple([None, None]), dtype='int32')
-        next_words_positions = PositionLayer(name='position_layer_next_words')(next_words)
-
-        # 3.1.2. Target word embedding
-        state_below = Embedding(params['OUTPUT_VOCABULARY_SIZE'],
-                                params['TARGET_TEXT_EMBEDDING_SIZE'],
-                                name='target_word_embedding',
-                                embeddings_regularizer=l2(params['WEIGHT_DECAY']),
-                                embeddings_initializer=params['INIT_FUNCTION'],
-                                trainable=self.trg_embedding_weights_trainable,
-                                weights=self.trg_embedding_weights,
-                                mask_zero=True)(next_words)
-
-        if params.get('SCALE_TARGET_WORD_EMBEDDINGS', False):
-            state_below = SqrtScaling(params['MODEL_SIZE'])(state_below)
-
-        if params['TARGET_TEXT_EMBEDDING_SIZE'] == params['SOURCE_TEXT_EMBEDDING_SIZE']:
-            positional_embedding_trg = positional_embedding
-        else:
-            max_len = max(params['MAX_OUTPUT_TEXT_LEN'], params['MAX_OUTPUT_TEXT_LEN_TEST'])
-
-            positional_embedding_trg = Embedding(max_len,
-                                                 params['TARGET_TEXT_EMBEDDING_SIZE'],
-                                                 name='positional_trg_word_embedding',
-                                                 trainable=False,
-                                                 weights=getPositionalEncodingWeights(max_len,
-                                                                                      params['TARGET_TEXT_EMBEDDING_SIZE'],
-                                                                                      name='positional_trg_word_embedding',
-                                                                                      verbose=self.verbose))
-
-        positional_trg_embedding = positional_embedding_trg(next_words_positions)
-
-        state_below = Add()([state_below, positional_trg_embedding])
-
-        # Regularize
-        state_below = Dropout(params['DROPOUT_P'])(state_below)
-
-        shared_trg_multihead_list = []
-        shared_trg_dropout_multihead_list = []
-        shared_trg_add_multihead_list = []
-        shared_trg_norm_multihead_list = []
-
-        shared_src_trg_multihead_list = []
-        shared_src_trg_dropout_multihead_list = []
-        shared_src_trg_add_multihead_list = []
-        shared_src_trg_norm_multihead_list = []
-
-        shared_ff_list = []
-        shared_dropout_ff_list = []
-        shared_add_ff_list = []
-        shared_norm_ff_list = []
-
-        prev_state_below = state_below
-
-        # Right tranformer block (decoder)
-        for n_block in range(params['N_LAYERS_DECODER']):
-
-            # Declare shared layers of each block
-
-            # Masked Multi-Head Attention block
-            shared_trg_multihead = MultiHeadAttention(params['N_HEADS'],
-                                                      params['MODEL_SIZE'],
-                                                      dropout=params.get('ATTENTION_DROPOUT_P', 0.),
-                                                      mask_future=True,  # Avoid attending on future sequences
-                                                      name='trg_MultiHeadAttention_' + str(n_block))
-            shared_trg_multihead_list.append(shared_trg_multihead)
-
-            # Regularize
-            shared_trg_multihead_dropout = Dropout(params['DROPOUT_P'])
-            shared_trg_dropout_multihead_list.append(shared_trg_multihead_dropout)
-
-            # Add
-            shared_trg_multihead_add = Add(name='trg_Residual_MultiHeadAttention_' + str(n_block))
-            shared_trg_add_multihead_list.append(shared_trg_multihead_add)
-
-            # And norm
-            shared_trg_multihead_norm = BatchNormalization(mode=1, name='trg_Normalization_MultiHeadAttention_' + str(n_block))
-            shared_trg_norm_multihead_list.append(shared_trg_multihead_norm)
-
-            # Second Multi-Head Attention block
-            shared_src_trg_multihead = MultiHeadAttention(params['N_HEADS'], params['MODEL_SIZE'],
-                                                          dropout=params.get('ATTENTION_DROPOUT_P', 0.),
-                                                          name='src_trg_MultiHeadAttention_' + str(n_block))
-            shared_src_trg_multihead_list.append(shared_src_trg_multihead)
-
-            # Regularize
-            shared_src_trg_multihead_dropout = Dropout(params['DROPOUT_P'])
-            shared_src_trg_dropout_multihead_list.append(shared_src_trg_multihead_dropout)
-
-            # Add
-            shared_src_trg_multihead_add = Add(name='src_trg_Residual_MultiHeadAttention_' + str(n_block))
-            shared_src_trg_add_multihead_list.append(shared_src_trg_multihead_add)
-
-            # And norm
-            shared_src_trg_multihead_norm = BatchNormalization(mode=1, name='src_trg_Normalization_MultiHeadAttention_' + str(n_block))
-            shared_src_trg_norm_multihead_list.append(shared_src_trg_multihead_norm)
-
-            # FF
-            shared_ff_src_trg_multihead = TimeDistributed(PositionwiseFeedForwardDense(params['FF_SIZE'],
-                                                                                       name='src_trg_PositionwiseFeedForward_' + str(n_block)),
-                                                          name='src_trg_TimeDistributedPositionwiseFeedForward_' + str(n_block))
-            shared_ff_list.append(shared_ff_src_trg_multihead)
-
-            # Regularize
-            shared_ff_src_trg_multihead_dropout = Dropout(params['DROPOUT_P'])
-            shared_dropout_ff_list.append(shared_ff_src_trg_multihead_dropout)
-
-            # Add
-            shared_ff_src_trg_multihead_add = Add(name='src_trg_Residual_FF_' + str(n_block))
-            shared_add_ff_list.append(shared_ff_src_trg_multihead_add)
-
-            # And norm
-            shared_ff_src_trg_multihead_norm = BatchNormalization(mode=1, name='src_trg_Normalization_FF_' + str(n_block))
-            shared_norm_ff_list.append(shared_ff_src_trg_multihead_norm)
-
-            # Apply shared layers
-            # Masked Multi-Head Attention block
-            trg_multihead = shared_trg_multihead_list[n_block]([prev_state_below, prev_state_below])
-
-            # Regularize
-            trg_multihead_dropout = shared_trg_dropout_multihead_list[n_block](trg_multihead)
-
-            # Add
-            trg_multihead_add = shared_trg_add_multihead_list[n_block]([prev_state_below, trg_multihead_dropout])
-
-            # And norm
-            trg_multihead_norm = shared_trg_norm_multihead_list[n_block](trg_multihead_add)
-
-            # Second Multi-Head Attention block
-            src_trg_multihead = shared_src_trg_multihead_list[n_block]([trg_multihead_norm,
-                                                                        masked_src_multihead])
-
-            # Regularize
-            src_trg_multihead_dropout = shared_src_trg_dropout_multihead_list[n_block](src_trg_multihead)
-
-            # Add
-            src_trg_multihead_add = shared_src_trg_add_multihead_list[n_block]([src_trg_multihead_dropout, trg_multihead_norm])
-
-            # And norm
-            src_trg_multihead_norm = shared_src_trg_norm_multihead_list[n_block](src_trg_multihead_add)
-
-            # FF
-            ff_src_trg_multihead = shared_ff_list[n_block](src_trg_multihead_norm)
-
-            # Regularize
-            ff_src_trg_multihead_dropout = shared_dropout_ff_list[n_block](ff_src_trg_multihead)
-
-            # Add
-            ff_src_trg_multihead_add = shared_add_ff_list[n_block]([ff_src_trg_multihead_dropout,
-                                                                    src_trg_multihead_norm])
-
-            # And norm
-            ff_src_trg_multihead_norm = shared_norm_ff_list[n_block](ff_src_trg_multihead_add)
-
-            prev_state_below = ff_src_trg_multihead_norm
-
-        out_layer = prev_state_below
-        shared_deep_list = []
-        shared_reg_deep_list = []
-        # 3.6 Optional deep ouput layer
-        for i, (activation, dimension) in enumerate(params['DEEP_OUTPUT_LAYERS']):
-            shared_deep_list.append(TimeDistributed(Dense(dimension,
-                                                          activation=activation,
-                                                          kernel_initializer=params['INIT_FUNCTION'],
-                                                          kernel_regularizer=l2(params['WEIGHT_DECAY']),
-                                                          bias_regularizer=l2(params['WEIGHT_DECAY']),
-                                                          trainable=params.get('TRAINABLE_DECODER', True),
-                                                          ),
-                                                    trainable=params.get('TRAINABLE_DECODER', True),
-                                                    name=activation + '_%d' % i))
-            out_layer = shared_deep_list[-1](out_layer)
-            [out_layer, shared_reg_out_layer] = Regularize(out_layer,
-                                                           params, shared_layers=True,
-                                                           name='out_layer_' + str(activation) + '_%d' % i)
-            shared_reg_deep_list.append(shared_reg_out_layer)
-
-        # 3.7. Output layer: Softmax
-        shared_FC_soft = TimeDistributed(Dense(params['OUTPUT_VOCABULARY_SIZE'],
-                                               activation=params['CLASSIFIER_ACTIVATION'],
-                                               kernel_regularizer=l2(params['WEIGHT_DECAY']),
-                                               bias_regularizer=l2(params['WEIGHT_DECAY']),
-                                               trainable=params.get('TRAINABLE_DECODER', True),
-                                               name=params['CLASSIFIER_ACTIVATION']
-                                               ),
-                                         trainable=params.get('TRAINABLE_DECODER', True),
-                                         name=self.ids_outputs[0])
-        softout = shared_FC_soft(out_layer)
-        self.model = Model(inputs=[src_text, next_words], outputs=softout)
-
-        ##################################################################
-        #                         SAMPLING MODEL                         #
-        ##################################################################
-        # Now that we have the basic training model ready, let's prepare the model for applying decoding
-        # The beam-search model will include all the minimum required set of layers (decoder stage) which offer the
-        # possibility to generate the next state in the sequence given a pre-processed input (encoder stage)
-        # First, we need a model that outputs the preprocessed input
-        # for applying the initial forward pass
-
-        model_init_input = [src_text, next_words]
-        model_init_output = [softout, masked_src_multihead]
-
-        # if self.return_alphas:
-        #    model_init_output.append(alphas)
-        self.model_init = Model(inputs=model_init_input, outputs=model_init_output)
-
-        # Store inputs and outputs names for model_init
-        self.ids_inputs_init = self.ids_inputs
-
-        # first output must be the output probs.
-        self.ids_outputs_init = self.ids_outputs + ['preprocessed_input']
-
-        # Second, we need to build an additional model with the capability to have the following inputs:
-        #   - preprocessed_input
-        #   - prev_word
-        # and the following outputs:
-        #   - softmax probabilities
-
-        preprocessed_size = params['MODEL_SIZE']
-
-        # Define inputs
-        preprocessed_annotations = Input(name='preprocessed_input',
-                                         shape=tuple([None, preprocessed_size]),
-                                         dtype='float32')
-
-        # Apply decoder
-        prev_state_below = state_below
-
-        # RIGHT TRANSFORMER BLOCK
-        for n_block in range(params['N_LAYERS_DECODER']):
-            # Masked Multi-Head Attention block
-            trg_multihead = shared_trg_multihead_list[n_block]([prev_state_below, prev_state_below])
-
-            # Regularize
-            trg_multihead_dropout = shared_trg_dropout_multihead_list[n_block](trg_multihead)
-
-            # Add
-            trg_multihead_add = shared_trg_add_multihead_list[n_block]([prev_state_below, trg_multihead_dropout])
-
-            # And norm
-            trg_multihead_norm = shared_trg_norm_multihead_list[n_block](trg_multihead_add)
-
-            # Second Multi-Head Attention block
-            src_trg_multihead = shared_src_trg_multihead_list[n_block]([trg_multihead_norm,
-                                                                        preprocessed_annotations])
-
-            # Regularize
-            src_trg_multihead_dropout = shared_src_trg_dropout_multihead_list[n_block](src_trg_multihead)
-
-            # Add
-            src_trg_multihead_add = shared_src_trg_add_multihead_list[n_block]([src_trg_multihead_dropout,
-                                                                                trg_multihead_norm])
-
-            # And norm
-            src_trg_multihead_norm = shared_src_trg_norm_multihead_list[n_block](src_trg_multihead_add)
-
-            # FF
-            ff_src_trg_multihead = shared_ff_list[n_block](src_trg_multihead_norm)
-
-            # Regularize
-            ff_src_trg_multihead_dropout = shared_dropout_ff_list[n_block](ff_src_trg_multihead)
-
-            # Add
-            ff_src_trg_multihead_add = shared_add_ff_list[n_block]([ff_src_trg_multihead_dropout,
-                                                                    src_trg_multihead_norm])
-
-            # And norm
-            ff_src_trg_multihead_norm = shared_norm_ff_list[n_block](ff_src_trg_multihead_add)
-
-            prev_state_below = ff_src_trg_multihead_norm
-
-        out_layer = prev_state_below
-
-        for (deep_out_layer, reg_list) in zip(shared_deep_list, shared_reg_deep_list):
-            out_layer = deep_out_layer(out_layer)
-            for reg in reg_list:
-                out_layer = reg(out_layer)
-
-        # Softmax
-        softout = shared_FC_soft(out_layer)
-
-        model_next_inputs = [next_words, preprocessed_annotations]
-        model_next_outputs = [softout, preprocessed_annotations]
-
-        # if self.return_alphas:
-        #     model_next_outputs.append(alphas)
-
-        self.model_next = Model(inputs=model_next_inputs,
-                                outputs=model_next_outputs)
-
-        # Store inputs and outputs names for model_next
-        # first input must be previous word
-        self.ids_inputs_next = [self.ids_inputs[1]] + ['preprocessed_input']
-        # first output must be the output probs.
-        self.ids_outputs_next = self.ids_outputs + ['preprocessed_input']
-        # Input -> Output matchings from model_init to model_next and from model_next to model_next
-        self.matchings_init_to_next = {'preprocessed_input': 'preprocessed_input'}
-        self.matchings_next_to_next = {'preprocessed_input': 'preprocessed_input'}
+    # Backwards compatibility.
+    GroundHogModel = AttentionRNNEncoderDecoder
 
     def CharacterModel(self, params):
         """
@@ -2024,6 +1641,393 @@ class TranslationModel(Model_Wrapper):
                 self.matchings_init_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
                 self.matchings_next_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
 
+    def TransformerCache(self, params):
+        """
+        Neural machine translation consisting in stacking blocks of:
+            * multi-head self-attention mechanism
+            * position-wise fully connected feed-forward networks.
+
+        See https://arxiv.org/abs/1706.03762 for an in-depth review of the model.
+
+        :param params: Dictionary of params (see config.py)
+        :return: None
+        """
+
+        # 1. Source text input
+        src_text = Input(name=self.ids_inputs[0], batch_shape=tuple([None, None]), dtype='int32')
+        src_positions = PositionLayer(name='position_layer_src_text')(src_text)
+
+        # 2. Encoder
+        # 2.1. Source word embedding
+        src_embedding = Embedding(params['INPUT_VOCABULARY_SIZE'],
+                                  params['SOURCE_TEXT_EMBEDDING_SIZE'],
+                                  name='source_word_embedding',
+                                  embeddings_regularizer=l2(params['WEIGHT_DECAY']),
+                                  embeddings_initializer=params['INIT_FUNCTION'],
+                                  trainable=self.src_embedding_weights_trainable,
+                                  weights=self.src_embedding_weights,
+                                  mask_zero=True)(src_text)
+
+        if params.get('SCALE_SOURCE_WORD_EMBEDDINGS', False):
+            src_embedding = SqrtScaling(params['MODEL_SIZE'])(src_embedding)
+        if params['TARGET_TEXT_EMBEDDING_SIZE'] == params['SOURCE_TEXT_EMBEDDING_SIZE']:
+            max_len = max(params['MAX_INPUT_TEXT_LEN'], params['MAX_OUTPUT_TEXT_LEN'], params['MAX_OUTPUT_TEXT_LEN_TEST'])
+        else:
+            max_len = params['MAX_INPUT_TEXT_LEN']
+
+        positional_embedding = Embedding(max_len,
+                                         params['SOURCE_TEXT_EMBEDDING_SIZE'],
+                                         name='positional_src_word_embedding',
+                                         trainable=False,
+                                         weights=getPositionalEncodingWeights(max_len,
+                                                                              params['SOURCE_TEXT_EMBEDDING_SIZE'],
+                                                                              name='positional_src_word_embedding',
+                                                                              verbose=self.verbose))
+        positional_src_embedding = positional_embedding(src_positions)
+        src_residual_multihead = Add(name='add_src_embedding_positional_src_embedding')([src_embedding, positional_src_embedding])
+
+        # Regularize
+        src_residual_multihead = Dropout(params['DROPOUT_P'])(src_residual_multihead)
+
+        prev_src_residual_multihead = src_residual_multihead
+
+        # Left tranformer block (encoder)
+        for n_block in range(params['N_LAYERS_ENCODER']):
+            src_multihead = MultiHeadAttention(params['N_HEADS'],
+                                               params['MODEL_SIZE'],
+                                               dropout=params.get('ATTENTION_DROPOUT_P', 0.),
+                                               name='src_MultiHeadAttention_' + str(n_block))([src_residual_multihead,
+                                                                                               src_residual_multihead])
+            # Regularize
+            src_multihead = Dropout(params['DROPOUT_P'])(src_multihead)
+            # Add
+            src_multihead = Add(name='src_Residual_MultiHeadAttention_' + str(n_block))([src_multihead, prev_src_residual_multihead])
+
+            # And norm
+            src_multihead = BatchNormalization(mode=1, name='src_Normalization_MultiHeadAttention_' + str(n_block))(src_multihead)
+
+            # FF
+            ff_src_multihead = TimeDistributed(PositionwiseFeedForwardDense(params['FF_SIZE']))(src_multihead)
+            # Regularize
+            ff_src_multihead = Dropout(params['DROPOUT_P'])(ff_src_multihead)
+
+            # Add
+            src_multihead = Add(name='src_Residual_FF_' + str(n_block))([ff_src_multihead, src_multihead])
+            # And norm
+            src_multihead = BatchNormalization(mode=1, name='src_Normalization_FF_' + str(n_block))(src_multihead)
+
+            prev_src_residual_multihead = src_multihead
+            src_residual_multihead = src_multihead
+
+        masked_src_multihead = MaskLayer()(prev_src_residual_multihead)  # We may want the padded annotations
+
+        ################
+        ##### CACHE #### # If something explodes this code is responsible
+        ################
+
+        #src_text_expanded = K.expand_dims(src_text, axis=-1)
+        masked_src_multihead = CacheLayer(params["CACHE_SIZE"],
+                                          len(self.vocabularies[self.ids_outputs[0]]['words2idx']) - 1)([masked_src_multihead, src_text])
+
+        # 3.1.1. Previously generated words as inputs for training -> Teacher forcing
+        next_words = Input(name=self.ids_inputs[1], batch_shape=tuple([None, None]), dtype='int32')
+        next_words_positions = PositionLayer(name='position_layer_next_words')(next_words)
+
+        # 3.1.2. Target word embedding
+        state_below = Embedding(params['OUTPUT_VOCABULARY_SIZE'],
+                                params['TARGET_TEXT_EMBEDDING_SIZE'],
+                                name='target_word_embedding',
+                                embeddings_regularizer=l2(params['WEIGHT_DECAY']),
+                                embeddings_initializer=params['INIT_FUNCTION'],
+                                trainable=self.trg_embedding_weights_trainable,
+                                weights=self.trg_embedding_weights,
+                                mask_zero=True)(next_words)
+
+        if params.get('SCALE_TARGET_WORD_EMBEDDINGS', False):
+            state_below = SqrtScaling(params['MODEL_SIZE'])(state_below)
+
+        if params['TARGET_TEXT_EMBEDDING_SIZE'] == params['SOURCE_TEXT_EMBEDDING_SIZE']:
+            positional_embedding_trg = positional_embedding
+        else:
+            max_len = max(params['MAX_OUTPUT_TEXT_LEN'], params['MAX_OUTPUT_TEXT_LEN_TEST'])
+
+            positional_embedding_trg = Embedding(max_len,
+                                                 params['TARGET_TEXT_EMBEDDING_SIZE'],
+                                                 name='positional_trg_word_embedding',
+                                                 trainable=False,
+                                                 weights=getPositionalEncodingWeights(max_len,
+                                                                                      params['TARGET_TEXT_EMBEDDING_SIZE'],
+                                                                                      name='positional_trg_word_embedding',
+                                                                                      verbose=self.verbose))
+
+        positional_trg_embedding = positional_embedding_trg(next_words_positions)
+
+        state_below = Add()([state_below, positional_trg_embedding])
+
+        # Regularize
+        state_below = Dropout(params['DROPOUT_P'])(state_below)
+
+        shared_trg_multihead_list = []
+        shared_trg_dropout_multihead_list = []
+        shared_trg_add_multihead_list = []
+        shared_trg_norm_multihead_list = []
+
+        shared_src_trg_multihead_list = []
+        shared_src_trg_dropout_multihead_list = []
+        shared_src_trg_add_multihead_list = []
+        shared_src_trg_norm_multihead_list = []
+
+        shared_ff_list = []
+        shared_dropout_ff_list = []
+        shared_add_ff_list = []
+        shared_norm_ff_list = []
+
+        prev_state_below = state_below
+
+        # Right tranformer block (decoder)
+        for n_block in range(params['N_LAYERS_DECODER']):
+
+            # Declare shared layers of each block
+
+            # Masked Multi-Head Attention block
+            shared_trg_multihead = MultiHeadAttention(params['N_HEADS'],
+                                                      params['MODEL_SIZE'],
+                                                      dropout=params.get('ATTENTION_DROPOUT_P', 0.),
+                                                      mask_future=True,  # Avoid attending on future sequences
+                                                      name='trg_MultiHeadAttention_' + str(n_block))
+            shared_trg_multihead_list.append(shared_trg_multihead)
+
+            # Regularize
+            shared_trg_multihead_dropout = Dropout(params['DROPOUT_P'])
+            shared_trg_dropout_multihead_list.append(shared_trg_multihead_dropout)
+
+            # Add
+            shared_trg_multihead_add = Add(name='trg_Residual_MultiHeadAttention_' + str(n_block))
+            shared_trg_add_multihead_list.append(shared_trg_multihead_add)
+
+            # And norm
+            shared_trg_multihead_norm = BatchNormalization(mode=1, name='trg_Normalization_MultiHeadAttention_' + str(n_block))
+            shared_trg_norm_multihead_list.append(shared_trg_multihead_norm)
+
+            # Second Multi-Head Attention block
+            shared_src_trg_multihead = MultiHeadAttention(params['N_HEADS'], params['MODEL_SIZE'],
+                                                          dropout=params.get('ATTENTION_DROPOUT_P', 0.),
+                                                          name='src_trg_MultiHeadAttention_' + str(n_block))
+            shared_src_trg_multihead_list.append(shared_src_trg_multihead)
+
+            # Regularize
+            shared_src_trg_multihead_dropout = Dropout(params['DROPOUT_P'])
+            shared_src_trg_dropout_multihead_list.append(shared_src_trg_multihead_dropout)
+
+            # Add
+            shared_src_trg_multihead_add = Add(name='src_trg_Residual_MultiHeadAttention_' + str(n_block))
+            shared_src_trg_add_multihead_list.append(shared_src_trg_multihead_add)
+
+            # And norm
+            shared_src_trg_multihead_norm = BatchNormalization(mode=1, name='src_trg_Normalization_MultiHeadAttention_' + str(n_block))
+            shared_src_trg_norm_multihead_list.append(shared_src_trg_multihead_norm)
+
+            # FF
+            shared_ff_src_trg_multihead = TimeDistributed(PositionwiseFeedForwardDense(params['FF_SIZE'],
+                                                                                       name='src_trg_PositionwiseFeedForward_' + str(n_block)),
+                                                          name='src_trg_TimeDistributedPositionwiseFeedForward_' + str(n_block))
+            shared_ff_list.append(shared_ff_src_trg_multihead)
+
+            # Regularize
+            shared_ff_src_trg_multihead_dropout = Dropout(params['DROPOUT_P'])
+            shared_dropout_ff_list.append(shared_ff_src_trg_multihead_dropout)
+
+            # Add
+            shared_ff_src_trg_multihead_add = Add(name='src_trg_Residual_FF_' + str(n_block))
+            shared_add_ff_list.append(shared_ff_src_trg_multihead_add)
+
+            # And norm
+            shared_ff_src_trg_multihead_norm = BatchNormalization(mode=1, name='src_trg_Normalization_FF_' + str(n_block))
+            shared_norm_ff_list.append(shared_ff_src_trg_multihead_norm)
+
+            # Apply shared layers
+            # Masked Multi-Head Attention block
+            trg_multihead = shared_trg_multihead_list[n_block]([prev_state_below, prev_state_below])
+
+            # Regularize
+            trg_multihead_dropout = shared_trg_dropout_multihead_list[n_block](trg_multihead)
+
+            # Add
+            trg_multihead_add = shared_trg_add_multihead_list[n_block]([prev_state_below, trg_multihead_dropout])
+
+            # And norm
+            trg_multihead_norm = shared_trg_norm_multihead_list[n_block](trg_multihead_add)
+
+            # Second Multi-Head Attention block
+            src_trg_multihead = shared_src_trg_multihead_list[n_block]([trg_multihead_norm,
+                                                                        masked_src_multihead])
+
+            # Regularize
+            src_trg_multihead_dropout = shared_src_trg_dropout_multihead_list[n_block](src_trg_multihead)
+
+            # Add
+            src_trg_multihead_add = shared_src_trg_add_multihead_list[n_block]([src_trg_multihead_dropout, trg_multihead_norm])
+
+            # And norm
+            src_trg_multihead_norm = shared_src_trg_norm_multihead_list[n_block](src_trg_multihead_add)
+
+            # FF
+            ff_src_trg_multihead = shared_ff_list[n_block](src_trg_multihead_norm)
+
+            # Regularize
+            ff_src_trg_multihead_dropout = shared_dropout_ff_list[n_block](ff_src_trg_multihead)
+
+            # Add
+            ff_src_trg_multihead_add = shared_add_ff_list[n_block]([ff_src_trg_multihead_dropout,
+                                                                    src_trg_multihead_norm])
+
+            # And norm
+            ff_src_trg_multihead_norm = shared_norm_ff_list[n_block](ff_src_trg_multihead_add)
+
+            prev_state_below = ff_src_trg_multihead_norm
+
+        out_layer = prev_state_below
+        shared_deep_list = []
+        shared_reg_deep_list = []
+        # 3.6 Optional deep ouput layer
+        for i, (activation, dimension) in enumerate(params['DEEP_OUTPUT_LAYERS']):
+            shared_deep_list.append(TimeDistributed(Dense(dimension,
+                                                          activation=activation,
+                                                          kernel_initializer=params['INIT_FUNCTION'],
+                                                          kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                                          bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                                          trainable=params.get('TRAINABLE_DECODER', True),
+                                                          ),
+                                                    trainable=params.get('TRAINABLE_DECODER', True),
+                                                    name=activation + '_%d' % i))
+            out_layer = shared_deep_list[-1](out_layer)
+            [out_layer, shared_reg_out_layer] = Regularize(out_layer,
+                                                           params, shared_layers=True,
+                                                           name='out_layer_' + str(activation) + '_%d' % i)
+            shared_reg_deep_list.append(shared_reg_out_layer)
+
+        # 3.7. Output layer: Softmax
+        shared_FC_soft = TimeDistributed(Dense(params['OUTPUT_VOCABULARY_SIZE'],
+                                               activation=params['CLASSIFIER_ACTIVATION'],
+                                               kernel_regularizer=l2(params['WEIGHT_DECAY']),
+                                               bias_regularizer=l2(params['WEIGHT_DECAY']),
+                                               trainable=params.get('TRAINABLE_DECODER', True),
+                                               name=params['CLASSIFIER_ACTIVATION']
+                                               ),
+                                         trainable=params.get('TRAINABLE_DECODER', True),
+                                         name=self.ids_outputs[0])
+        softout = shared_FC_soft(out_layer)
+        self.model = Model(inputs=[src_text, next_words], outputs=softout)
+
+        ##################################################################
+        #                         SAMPLING MODEL                         #
+        ##################################################################
+        # Now that we have the basic training model ready, let's prepare the model for applying decoding
+        # The beam-search model will include all the minimum required set of layers (decoder stage) which offer the
+        # possibility to generate the next state in the sequence given a pre-processed input (encoder stage)
+        # First, we need a model that outputs the preprocessed input
+        # for applying the initial forward pass
+
+        model_init_input = [src_text, next_words]
+        model_init_output = [softout, masked_src_multihead]
+
+        # if self.return_alphas:
+        #    model_init_output.append(alphas)
+        self.model_init = Model(inputs=model_init_input, outputs=model_init_output)
+
+        # Store inputs and outputs names for model_init
+        self.ids_inputs_init = self.ids_inputs
+
+        # first output must be the output probs.
+        self.ids_outputs_init = self.ids_outputs + ['preprocessed_input']
+
+        # Second, we need to build an additional model with the capability to have the following inputs:
+        #   - preprocessed_input
+        #   - prev_word
+        # and the following outputs:
+        #   - softmax probabilities
+
+        preprocessed_size = params['MODEL_SIZE']
+
+        # Define inputs
+        preprocessed_annotations = Input(name='preprocessed_input',
+                                         shape=tuple([None, preprocessed_size]),
+                                         dtype='float32')
+
+        # Apply decoder
+        prev_state_below = state_below
+
+        # RIGHT TRANSFORMER BLOCK
+        for n_block in range(params['N_LAYERS_DECODER']):
+            # Masked Multi-Head Attention block
+            trg_multihead = shared_trg_multihead_list[n_block]([prev_state_below, prev_state_below])
+
+            # Regularize
+            trg_multihead_dropout = shared_trg_dropout_multihead_list[n_block](trg_multihead)
+
+            # Add
+            trg_multihead_add = shared_trg_add_multihead_list[n_block]([prev_state_below, trg_multihead_dropout])
+
+            # And norm
+            trg_multihead_norm = shared_trg_norm_multihead_list[n_block](trg_multihead_add)
+
+            # Second Multi-Head Attention block
+            src_trg_multihead = shared_src_trg_multihead_list[n_block]([trg_multihead_norm,
+                                                                        preprocessed_annotations])
+
+            # Regularize
+            src_trg_multihead_dropout = shared_src_trg_dropout_multihead_list[n_block](src_trg_multihead)
+
+            # Add
+            src_trg_multihead_add = shared_src_trg_add_multihead_list[n_block]([src_trg_multihead_dropout,
+                                                                                trg_multihead_norm])
+
+            # And norm
+            src_trg_multihead_norm = shared_src_trg_norm_multihead_list[n_block](src_trg_multihead_add)
+
+            # FF
+            ff_src_trg_multihead = shared_ff_list[n_block](src_trg_multihead_norm)
+
+            # Regularize
+            ff_src_trg_multihead_dropout = shared_dropout_ff_list[n_block](ff_src_trg_multihead)
+
+            # Add
+            ff_src_trg_multihead_add = shared_add_ff_list[n_block]([ff_src_trg_multihead_dropout,
+                                                                    src_trg_multihead_norm])
+
+            # And norm
+            ff_src_trg_multihead_norm = shared_norm_ff_list[n_block](ff_src_trg_multihead_add)
+
+            prev_state_below = ff_src_trg_multihead_norm
+
+        out_layer = prev_state_below
+
+        for (deep_out_layer, reg_list) in zip(shared_deep_list, shared_reg_deep_list):
+            out_layer = deep_out_layer(out_layer)
+            for reg in reg_list:
+                out_layer = reg(out_layer)
+
+        # Softmax
+        softout = shared_FC_soft(out_layer)
+
+        model_next_inputs = [next_words, preprocessed_annotations]
+        model_next_outputs = [softout, preprocessed_annotations]
+
+        # if self.return_alphas:
+        #     model_next_outputs.append(alphas)
+
+        self.model_next = Model(inputs=model_next_inputs,
+                                outputs=model_next_outputs)
+
+        # Store inputs and outputs names for model_next
+        # first input must be previous word
+        self.ids_inputs_next = [self.ids_inputs[1]] + ['preprocessed_input']
+        # first output must be the output probs.
+        self.ids_outputs_next = self.ids_outputs + ['preprocessed_input']
+        # Input -> Output matchings from model_init to model_next and from model_next to model_next
+        self.matchings_init_to_next = {'preprocessed_input': 'preprocessed_input'}
+        self.matchings_next_to_next = {'preprocessed_input': 'preprocessed_input'}
+
     def Char2Char(self, params):
         """
         Neural Machine translation at fully character level with:
@@ -2502,10 +2506,3 @@ class TranslationModel(Model_Wrapper):
                     self.ids_outputs_next.append('next_memory_' + str(n_memory))
                     self.matchings_init_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
                     self.matchings_next_to_next['next_memory_' + str(n_memory)] = 'prev_memory_' + str(n_memory)
-
-
-
-
-
-
-

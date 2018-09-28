@@ -111,10 +111,10 @@ def train_model(params, load_dataset=None):
 
     # Training
     total_start_time = timer()
-
     logger.debug('Starting training!')
     training_params = {'n_epochs': params['MAX_EPOCH'],
                        'batch_size': params['BATCH_SIZE'],
+                       'sep': params.get('SEP', 0),
                        'homogeneous_batches': params['HOMOGENEOUS_BATCHES'],
                        'maxlen': params['MAX_OUTPUT_TEXT_LEN'],
                        'joint_batches': params['JOINT_BATCHES'],
