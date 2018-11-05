@@ -52,7 +52,7 @@ def sample_ensemble(args, params):
     params_prediction['max_batch_size'] = params.get('BATCH_SIZE', 20)
     params_prediction['n_parallel_loaders'] = params.get('PARALLEL_LOADERS', 1)
     params_prediction['beam_size'] = params.get('BEAM_SIZE', 6)
-    params_prediction['maxlen'] = params.get('MAX_OUTPUT_TEXT_LEN_TEST', 100)
+    params_prediction['maxlen'] = 80 #params.get('MAX_OUTPUT_TEXT_LEN_TEST', 100)
     params_prediction['optimized_search'] = params['OPTIMIZED_SEARCH']
     params_prediction['model_inputs'] = params['INPUTS_IDS_MODEL']
     params_prediction['model_outputs'] = params['OUTPUTS_IDS_MODEL']

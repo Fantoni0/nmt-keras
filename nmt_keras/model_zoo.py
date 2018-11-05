@@ -1722,12 +1722,12 @@ class TranslationModel(Model_Wrapper):
         masked_src_multihead = MaskLayer()(prev_src_residual_multihead)  # We may want the padded annotations
 
         ################
-        ##### CACHE #### # If something explodes this code is responsible
+        ##### CACHE ####
         ################
-
-        #src_text_expanded = K.expand_dims(src_text, axis=-1)
-        masked_src_multihead = CacheLayer(params["CACHE_SIZE"],
-                                          len(self.vocabularies[self.ids_outputs[0]]['words2idx']) - 1)([masked_src_multihead, src_text])
+        shared_cache_layer = CacheLayer(params['CACHE_SIZE'],
+                                        len(self.vocabularies[self.ids_outputs[0]]['words2idx']) - 1,
+                                        params['CACHE_PATIENCE'])
+        masked_src_multihead = shared_cache_layer([masked_src_multihead, src_text])
 
         # 3.1.1. Previously generated words as inputs for training -> Teacher forcing
         next_words = Input(name=self.ids_inputs[1], batch_shape=tuple([None, None]), dtype='int32')
@@ -1929,7 +1929,7 @@ class TranslationModel(Model_Wrapper):
         # for applying the initial forward pass
 
         model_init_input = [src_text, next_words]
-        model_init_output = [softout, masked_src_multihead]
+        model_init_output = [softout, masked_src_multihead, src_text]
 
         # if self.return_alphas:
         #    model_init_output.append(alphas)
@@ -1939,7 +1939,7 @@ class TranslationModel(Model_Wrapper):
         self.ids_inputs_init = self.ids_inputs
 
         # first output must be the output probs.
-        self.ids_outputs_init = self.ids_outputs + ['preprocessed_input']
+        self.ids_outputs_init = self.ids_outputs + ['preprocessed_input'] + [self.ids_inputs[0]]
 
         # Second, we need to build an additional model with the capability to have the following inputs:
         #   - preprocessed_input
@@ -1953,6 +1953,9 @@ class TranslationModel(Model_Wrapper):
         preprocessed_annotations = Input(name='preprocessed_input',
                                          shape=tuple([None, preprocessed_size]),
                                          dtype='float32')
+
+        # CACHE IN SAMPLING
+        preprocessed_annotations_with_cache = shared_cache_layer([preprocessed_annotations, src_text])
 
         # Apply decoder
         prev_state_below = state_below
@@ -1973,7 +1976,7 @@ class TranslationModel(Model_Wrapper):
 
             # Second Multi-Head Attention block
             src_trg_multihead = shared_src_trg_multihead_list[n_block]([trg_multihead_norm,
-                                                                        preprocessed_annotations])
+                                                                        preprocessed_annotations_with_cache])
 
             # Regularize
             src_trg_multihead_dropout = shared_src_trg_dropout_multihead_list[n_block](src_trg_multihead)
@@ -2010,8 +2013,8 @@ class TranslationModel(Model_Wrapper):
         # Softmax
         softout = shared_FC_soft(out_layer)
 
-        model_next_inputs = [next_words, preprocessed_annotations]
-        model_next_outputs = [softout, preprocessed_annotations]
+        model_next_inputs = [next_words, preprocessed_annotations, src_text]
+        model_next_outputs = [softout, preprocessed_annotations, src_text]
 
         # if self.return_alphas:
         #     model_next_outputs.append(alphas)
@@ -2021,12 +2024,12 @@ class TranslationModel(Model_Wrapper):
 
         # Store inputs and outputs names for model_next
         # first input must be previous word
-        self.ids_inputs_next = [self.ids_inputs[1]] + ['preprocessed_input']
+        self.ids_inputs_next = [self.ids_inputs[1]] + ['preprocessed_input'] + [self.ids_inputs[0]]
         # first output must be the output probs.
-        self.ids_outputs_next = self.ids_outputs + ['preprocessed_input']
+        self.ids_outputs_next = self.ids_outputs + ['preprocessed_input'] + [self.ids_inputs[0]]
         # Input -> Output matchings from model_init to model_next and from model_next to model_next
-        self.matchings_init_to_next = {'preprocessed_input': 'preprocessed_input'}
-        self.matchings_next_to_next = {'preprocessed_input': 'preprocessed_input'}
+        self.matchings_init_to_next = {'preprocessed_input': 'preprocessed_input', self.ids_inputs[0]: self.ids_inputs[0]}
+        self.matchings_next_to_next = {'preprocessed_input': 'preprocessed_input', self.ids_inputs[0]: self.ids_inputs[0]}
 
     def Char2Char(self, params):
         """

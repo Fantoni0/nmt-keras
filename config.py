@@ -23,22 +23,20 @@ def load_parameters():
     INPUTS_IDS_MODEL = ['source_text', 'state_below']       # Corresponding inputs of the built model.
     OUTPUTS_IDS_MODEL = ['target_text']                     # Corresponding outputs of the built model.
 
-    SEP = 10                                                # When using cache models how much separation betwwen sentences in the same batch
-
     # Evaluation params
     METRICS = ['coco']                            # Metric used for evaluating the model.
     EVAL_ON_SETS = ['val']                        # Possible values: 'train', 'val' and 'test' (external evaluator).
     EVAL_ON_SETS_KERAS = []                       # Possible values: 'train', 'val' and 'test' (Keras' evaluator). Untested..
-    START_EVAL_ON_EPOCH = 0                       # First epoch to start the model evaluation.
+    START_EVAL_ON_EPOCH = 1                       # First epoch to start the model evaluation.
     EVAL_EACH_EPOCHS = False                      # Select whether evaluate between N epochs or N updates.
-    EVAL_EACH = 400                              # Sets the evaluation frequency (epochs or updates).
+    EVAL_EACH = 5000                              # Sets the evaluation frequency (epochs or updates).
 
     # Search parameters
     SAMPLING = 'max_likelihood'                   # Possible values: multinomial or max_likelihood (recommended).
     TEMPERATURE = 1                               # Multinomial sampling parameter.
     BEAM_SEARCH = True                            # Switches on-off the beam search procedure.
-    BEAM_SIZE = 4                                 # Beam size (in case of BEAM_SEARCH == True).
-    OPTIMIZED_SEARCH = True                       # Compute annotations only a single time per sample.
+    BEAM_SIZE = 8                                 # Beam size (in case of BEAM_SEARCH == True).
+    OPTIMIZED_SEARCH = False                      # Compute annotations only a single time per sample.
     SEARCH_PRUNING = False                        # Apply pruning strategies to the beam search method.
                                                   # It will likely increase decoding speed, but decrease quality.
     MAXLEN_GIVEN_X = True                         # Generate translations of similar length to the source sentences.
@@ -86,13 +84,13 @@ def load_parameters():
                                                   # See Dataset class (from stager_keras_wrapper) for more info.
     BPE_CODES_PATH = DATA_ROOT_PATH + '/training_codes.joint'    # If TOKENIZATION_METHOD = 'tokenize_bpe',
                                                   # sets the path to the learned BPE codes.
-    DETOKENIZATION_METHOD = 'detokenize_bpe'     # Select which de-tokenization method we'll apply.
+    DETOKENIZATION_METHOD = 'detokenize_bpe'      # Select which de-tokenization method we'll apply.
 
-    APPLY_DETOKENIZATION = True                  # Wheter we apply a detokenization method.
+    APPLY_DETOKENIZATION = True                   # Wheter we apply a detokenization method.
 
     TOKENIZE_HYPOTHESES = False   		          # Whether we tokenize the hypotheses using the
                                                   # previously defined tokenization method.
-    TOKENIZE_REFERENCES = False                    # Whether we tokenize the references using the
+    TOKENIZE_REFERENCES = False                   # Whether we tokenize the references using the
                                                   # previously defined tokenization method.
 
     # Input image parameters
@@ -100,7 +98,7 @@ def load_parameters():
 
     # Text parameters
     FILL = 'end'                                  # Whether we pad the 'end' or the 'start' of the sentence with 0s
-    PAD_ON_BATCH = True                # Whether we take as many timesteps as the longest sequence of
+    PAD_ON_BATCH = True                           # Whether we take as many timesteps as the longest sequence of
                                                   # the batch or a fixed size (MAX_OUTPUT_TEXT_LEN)
 
     # Character model
@@ -109,20 +107,22 @@ def load_parameters():
     FILL_TARGET = 'end'
 
     # Cache parameters
-    CACHE_SIZE = 7
+    CACHE_SIZE = 200
+    SEP = 10                                      # When using cache models how much separation betwwen sentences in the same batch
+    CACHE_PATIENCE = 150000
 
     # Input text parameters
-    INPUT_VOCABULARY_SIZE = 30000                     # Size of the input vocabulary. Set to 0 for using all,
+    INPUT_VOCABULARY_SIZE = 0                     # Size of the input vocabulary. Set to 0 for using all,
                                                   # otherwise it will be truncated to these most frequent words.
     MIN_OCCURRENCES_INPUT_VOCAB = 0               # Minimum number of occurrences allowed for the words in the input vocabulary.
                                                   # Set to 0 for using them all.
-    MAX_INPUT_TEXT_LEN = 3                       # Maximum length of the input sequence.
+    MAX_INPUT_TEXT_LEN = 70                       # Maximum length of the input sequence.
 
     # Output text parameters
-    OUTPUT_VOCABULARY_SIZE = 30000                    # Size of the input vocabulary. Set to 0 for using all,
+    OUTPUT_VOCABULARY_SIZE = 0                    # Size of the input vocabulary. Set to 0 for using all,
                                                   # otherwise it will be truncated to these most frequent words.
     MIN_OCCURRENCES_OUTPUT_VOCAB = 0              # Minimum number of occurrences allowed for the words in the output vocabulary.
-    MAX_OUTPUT_TEXT_LEN = 3                      # Maximum length of the output sequence.
+    MAX_OUTPUT_TEXT_LEN = 70                      # Maximum length of the output sequence.
                                                   # set to 0 if we want to use the whole answer as a single class.
     MAX_OUTPUT_TEXT_LEN_TEST = MAX_OUTPUT_TEXT_LEN * 3  # Maximum length of the output sequence during test time.
 
@@ -149,7 +149,8 @@ def load_parameters():
 
     # Learning rate schedule
     LR_DECAY = None                               # Frequency (number of epochs or updates) between LR annealings. Set to None for not decay the learning rate.
-    LR_GAMMA = 0.8                                # Multiplier used for decreasing the LR.
+    LR_GAMMA = 0.8
+    # Multiplier used for decreasing the LR.
     LR_REDUCE_EACH_EPOCHS = False                 # Reduce each LR_DECAY number of epochs or updates.
     LR_START_REDUCTION_ON_EPOCH = 0               # Epoch to start the reduction.
     LR_REDUCER_TYPE = 'noam'                      # Function to reduce. 'linear' and 'exponential' implemented..
@@ -159,7 +160,7 @@ def load_parameters():
 
     # Training parameters
     MAX_EPOCH = 500                               # Stop when computed this number of epochs.
-    BATCH_SIZE = 2                             # Size of each minibatch.
+    BATCH_SIZE = 7                             # Size of each minibatch.
 
     HOMOGENEOUS_BATCHES = False                   # Use batches with homogeneous output lengths (Dangerous!!).
     JOINT_BATCHES = 4                             # When using homogeneous batches, get this number of batches to sort.
@@ -189,13 +190,13 @@ def load_parameters():
     INNER_INIT = 'orthogonal'                     # Initialization function for inner RNN matrices.
     INIT_ATT = 'glorot_uniform'                   # Initialization function for attention mechism matrices
 
-    SOURCE_TEXT_EMBEDDING_SIZE = 2              # Source language word embedding size.
+    SOURCE_TEXT_EMBEDDING_SIZE = 512              # Source language word embedding size.
     SRC_PRETRAINED_VECTORS = None                 # Path to pretrained vectors (e.g.: DATA_ROOT_PATH + '/DATA/word2vec.%s.npy' % SRC_LAN).
                                                   # Set to None if you don't want to use pretrained vectors.
                                                   # When using pretrained word embeddings. this parameter must match with the word embeddings size
     SRC_PRETRAINED_VECTORS_TRAINABLE = True       # Finetune or not the target word embedding vectors.
 
-    TARGET_TEXT_EMBEDDING_SIZE = 2               # Source language word embedding size.
+    TARGET_TEXT_EMBEDDING_SIZE = 512               # Source language word embedding size.
     TRG_PRETRAINED_VECTORS = None                 # Path to pretrained vectors. (e.g. DATA_ROOT_PATH + '/DATA/word2vec.%s.npy' % TRG_LAN)
                                                   # Set to None if you don't want to use pretrained vectors.
                                                   # When using pretrained word embeddings, the size of the pretrained word embeddings must match with the word embeddings size.
@@ -221,7 +222,7 @@ def load_parameters():
     ATTENTION_MODE = 'add'                        # Attention mode. 'add' (Bahdanau-style), 'dot' (Luong-style) or 'scaled-dot'.
 
     # Encoder configuration
-    ENCODER_HIDDEN_SIZE = 2                      # For models with RNN encoder.
+    ENCODER_HIDDEN_SIZE = 512                      # For models with RNN encoder.
     BIDIRECTIONAL_ENCODER = True                  # Use bidirectional encoder.
     BIDIRECTIONAL_DEEP_ENCODER = True             # Use bidirectional encoder in all encoding layers.
 
@@ -231,7 +232,7 @@ def load_parameters():
     INIT_LAYERS = ['tanh']
 
     # Decoder configuration
-    DECODER_HIDDEN_SIZE = 2                      # For models with RNN decoder.
+    DECODER_HIDDEN_SIZE = 512                      # For models with RNN decoder.
     ATTENTION_SIZE = DECODER_HIDDEN_SIZE
     # Skip connections parameters
     SKIP_VECTORS_HIDDEN_SIZE = TARGET_TEXT_EMBEDDING_SIZE     # Hidden size.
@@ -240,10 +241,10 @@ def load_parameters():
 
     # Transformer model hyperparameters
     # # # # # # # # # # # # # # # # # # # # # # # #
-    MODEL_SIZE = 2                              # Transformer model size (d_{model} in de paper).
+    MODEL_SIZE = 512                              # Transformer model size (d_{model} in de paper).
     MULTIHEAD_ATTENTION_ACTIVATION = 'linear'     # Activation the input projections in the Multi-Head Attention blocks.
     FF_SIZE = MODEL_SIZE * 4                      # Size of the feed-forward layers of the Transformer model.
-    N_HEADS = 2                                   # Number of parallel attention layers of the Transformer model.
+    N_HEADS = 8                                   # Number of parallel attention layers of the Transformer model.
     # # # # # # # # # # # # # # # # # # # # # # # #
 
     # Regularizers
