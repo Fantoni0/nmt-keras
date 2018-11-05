@@ -18,14 +18,14 @@ import BaseHTTPServer
 import urllib
 from collections import OrderedDict
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
-from keras_wrapper.beam_search_interactive import InteractiveBeamSearchSampler
+from keras_wrapper.model_ensemble import InteractiveBeamSearchSampler
 from keras_wrapper.cnn_model import loadModel, updateModel
 from keras_wrapper.dataset import loadDataset
 from keras_wrapper.extra.isles_utils import *
 from keras_wrapper.extra.read_write import pkl2dict, list2file
 from keras_wrapper.online_trainer import OnlineTrainer
 from keras_wrapper.utils import decode_predictions_beam_search, flatten_list_of_lists
-from model_zoo import TranslationModel
+from nmt_keras.model_zoo import TranslationModel
 # from online_models import build_online_models
 from utils.utils import update_parameters
 from config_online import load_parameters as load_parameters_online
